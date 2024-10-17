@@ -1,5 +1,5 @@
-struct TranslationLanguageOptions: Codable, Sendable {
-    var language: String
-    var model: TranslationModel?
+public struct TranslationLanguageOptions: Codable, Sendable {
+    public var language: String
+    public var model: TranslationModel?
 }
 

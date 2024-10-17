@@ -1,5 +1,5 @@
-struct TranslationLanguage: Codable, Sendable {
-    var status: TranslationJobStatus
-    var failure: String?
+public struct TranslationLanguage: Codable, Sendable {
+    public var status: TranslationJobStatus
+    public var failure: String?
 }
 

@@ -1,9 +1,9 @@
-struct SentimentAnalysisJobOptions: Codable, Sendable {
-    var metadata: String?
-    var notification_config: CustomerUrlData?
-    var delete_after_seconds: Double?
-    var language: String?
-    var text: String?
-    var json: RevAiApiTranscript?
+public struct SentimentAnalysisJobOptions: Codable, Sendable {
+    public var metadata: String?
+    public var notification_config: CustomerUrlData?
+    public var delete_after_seconds: Double?
+    public var language: String?
+    public var text: String?
+    public var json: RevAiApiTranscript?
 }
 

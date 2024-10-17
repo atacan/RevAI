@@ -1,5 +1,5 @@
-struct GetListOfJobsOptions: Codable, Sendable {
-    var limit: Double?
-    var starting_after: String?
+public struct GetListOfJobsOptions: Codable, Sendable {
+    public var limit: Double?
+    public var starting_after: String?
 }
 

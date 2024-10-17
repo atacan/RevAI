@@ -1,4 +1,4 @@
-struct SentimentAnalysisResultOptions: Codable, Sendable {
-    var filter_for: Sentiment?
+public struct SentimentAnalysisResultOptions: Codable, Sendable {
+    public var filter_for: Sentiment?
 }
 

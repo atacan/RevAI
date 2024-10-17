@@ -1,5 +1,5 @@
-struct CustomerUrlData: Codable, Sendable {
-    var url: String
-    var auth_headers: [String: String]?
+public struct CustomerUrlData: Codable, Sendable {
+    public var url: String
+    public var auth_headers: [String: String]?
 }
 

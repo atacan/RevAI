@@ -1,14 +1,14 @@
-struct SentimentAnalysisResult: Codable, Sendable {
-    var messages: [SentimentAnalysisMessage]
+public struct SentimentAnalysisResult: Codable, Sendable {
+    public var messages: [SentimentAnalysisMessage]
 }
 
-struct SentimentAnalysisMessage: Codable, Sendable {
-    var content: String
-    var score: Double
-    var sentiment: Sentiment
-    var ts: Double?
-    var end_ts: Double?
-    var offset: Double?
-    var length: Double?
+public struct SentimentAnalysisMessage: Codable, Sendable {
+    public var content: String
+    public var score: Double
+    public var sentiment: Sentiment
+    public var ts: Double?
+    public var end_ts: Double?
+    public var offset: Double?
+    public var length: Double?
 }
 

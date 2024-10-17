@@ -1,4 +1,4 @@
-struct TopicExtractionResultOptions: Codable, Sendable {
-    var threshold: Double?
+public struct TopicExtractionResultOptions: Codable, Sendable {
+    public var threshold: Double?
 }
 

@@ -1,15 +1,15 @@
-struct LanguageIdJob: Codable, Sendable {
-    var id: String
-    var status: JobStatus
-    var type: JobType
-    var created_on: String
-    var completed_on: String?
-    var metadata: String?
-    var callback_url: String?
-    var processed_duration_seconds: Double?
-    var media_url: String?
-    var failure: String?
-    var failure_detail: String?
-    var delete_after_seconds: Double?
+public struct LanguageIdJob: Codable, Sendable {
+    public var id: String
+    public var status: JobStatus
+    public var type: JobType
+    public var created_on: String
+    public var completed_on: String?
+    public var metadata: String?
+    public var callback_url: String?
+    public var processed_duration_seconds: Double?
+    public var media_url: String?
+    public var failure: String?
+    public var failure_detail: String?
+    public var delete_after_seconds: Double?
 }
 

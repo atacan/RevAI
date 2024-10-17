@@ -1,4 +1,4 @@
-enum SummarizationModel: String, Codable, Sendable {
+public enum SummarizationModel: String, Codable, Sendable {
     case standard = "standard"
     case premium = "premium"
 }

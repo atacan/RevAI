@@ -1,4 +1,4 @@
-enum SummarizationJobStatus: String, Codable, Sendable {
+public enum SummarizationJobStatus: String, Codable, Sendable {
     case failed = "failed"
     case inprogress = "in_progress"
     case completed = "completed"

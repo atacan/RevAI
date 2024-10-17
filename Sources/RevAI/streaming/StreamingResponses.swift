@@ -1,15 +1,15 @@
-struct StreamingResponse: Codable, Sendable {
-    var type: String
+public struct StreamingResponse: Codable, Sendable {
+    public var type: String
 }
 
-struct StreamingHypothesis: Codable, Sendable {
-    var ts: Double?
-    var end_ts: Double?
-    var speaker_id: Double?
-    var elements: [Element]
+public struct StreamingHypothesis: Codable, Sendable {
+    public var ts: Double?
+    public var end_ts: Double?
+    public var speaker_id: Double?
+    public var elements: [Element]
 }
 
-struct StreamingConnected: Codable, Sendable {
-    var id: String
+public struct StreamingConnected: Codable, Sendable {
+    public var id: String
 }
 

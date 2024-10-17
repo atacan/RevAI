@@ -1,6 +1,6 @@
-struct SummarizationOptions: Codable, Sendable {
-    var prompt: String?
-    var model: SummarizationModel?
-    var type: SummarizationFormattingOptions?
+public struct SummarizationOptions: Codable, Sendable {
+    public var prompt: String?
+    public var model: SummarizationModel?
+    public var type: SummarizationFormattingOptions?
 }
 

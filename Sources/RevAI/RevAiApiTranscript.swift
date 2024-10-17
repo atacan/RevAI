@@ -1,23 +1,23 @@
-struct RevAiApiTranscript: Codable, Sendable {
-    var monologues: [Monologue]
+public struct RevAiApiTranscript: Codable, Sendable {
+    public var monologues: [Monologue]
 }
 
-struct SpeakerInfo: Codable, Sendable {
-    var id: String
-    var display_name: String
+public struct SpeakerInfo: Codable, Sendable {
+    public var id: String
+    public var display_name: String
 }
 
-struct Monologue: Codable, Sendable {
-    var speaker: Double
-    var speaker_info: SpeakerInfo?
-    var elements: [Element]
+public struct Monologue: Codable, Sendable {
+    public var speaker: Double
+    public var speaker_info: SpeakerInfo?
+    public var elements: [Element]
 }
 
-struct Element: Codable, Sendable {
-    var type: String
-    var value: String
-    var ts: Double?
-    var end_ts: Double?
-    var confidence: Double?
+public struct Element: Codable, Sendable {
+    public var type: String
+    public var value: String
+    public var ts: Double?
+    public var end_ts: Double?
+    public var confidence: Double?
 }
 

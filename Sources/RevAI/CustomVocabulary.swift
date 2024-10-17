@@ -1,4 +1,4 @@
-struct CustomVocabulary: Codable, Sendable {
-    var phrases: [String]
+public struct CustomVocabulary: Codable, Sendable {
+    public var phrases: [String]
 }
 

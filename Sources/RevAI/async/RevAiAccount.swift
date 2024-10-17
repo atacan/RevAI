@@ -1,5 +1,5 @@
-struct RevAiAccount: Codable, Sendable {
-    var email: String
-    var balance_seconds: Double
+public struct RevAiAccount: Codable, Sendable {
+    public var email: String
+    public var balance_seconds: Double
 }
 

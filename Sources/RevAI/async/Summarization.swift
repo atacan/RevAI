@@ -1,6 +1,6 @@
-struct Summarization: Codable, Sendable {
-    var status: SummarizationJobStatus
-    var completed_on: String?
-    var failure: String?
+public struct Summarization: Codable, Sendable {
+    public var status: SummarizationJobStatus
+    public var completed_on: String?
+    public var failure: String?
 }
 

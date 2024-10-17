@@ -1,4 +1,4 @@
-struct TranslationOptions: Codable, Sendable {
-    var target_languages: [TranslationLanguageOptions]
+public struct TranslationOptions: Codable, Sendable {
+    public var target_languages: [TranslationLanguageOptions]
 }
 

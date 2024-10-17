@@ -1,5 +1,5 @@
-struct Summary: Codable, Sendable {
-    var summary: String?
-    var bullet_points: [String]?
+public struct Summary: Codable, Sendable {
+    public var summary: String?
+    public var bullet_points: [String]?
 }
 

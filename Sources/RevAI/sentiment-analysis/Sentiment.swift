@@ -1,4 +1,4 @@
-enum Sentiment: String, Codable, Sendable {
+public enum Sentiment: String, Codable, Sendable {
     case positive = "positive"
     case neutral = "neutral"
     case negative = "negative"

@@ -1,4 +1,4 @@
-enum SummarizationFormattingOptions: String, Codable, Sendable {
+public enum SummarizationFormattingOptions: String, Codable, Sendable {
     case paragraph = "paragraph"
     case bullets = "bullets"
 }

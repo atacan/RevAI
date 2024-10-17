@@ -1,10 +1,10 @@
-struct LanguageIdResult: Codable, Sendable {
-    var top_language: String
-    var language_confidences: [LanguageConfidence]
+public struct LanguageIdResult: Codable, Sendable {
+    public var top_language: String
+    public var language_confidences: [LanguageConfidence]
 }
 
-struct LanguageConfidence: Codable, Sendable {
-    var language: String
-    var confidence: Double
+public struct LanguageConfidence: Codable, Sendable {
+    public var language: String
+    public var confidence: Double
 }
 
