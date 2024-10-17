@@ -1,5 +1,5 @@
 # Swift RevAI
 
-Swift models generated from [Node.js SDK](https://github.com/revdotcom/revai-node-sdk) for the Rev AI API.
+Swift models generated from the [Node.js SDK for the Rev AI API](https://github.com/revdotcom/revai-node-sdk).
 
-The generation script: https://github.com/atacan/TypescriptToSwift
+The generation script can be found here: https://github.com/atacan/TypescriptToSwift
