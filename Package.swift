@@ -18,6 +18,10 @@ let package = Package(
             name: "RevAI"),
         .testTarget(
             name: "RevAITests",
-            dependencies: ["RevAI"]),
+            dependencies: ["RevAI"],
+            resources: [
+                .copy("Resources")
+            ]
+        ),
     ]
 )
