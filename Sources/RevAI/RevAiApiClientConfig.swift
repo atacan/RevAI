@@ -1,7 +1,7 @@
 public struct RevAiApiClientConfig: Codable, Sendable {
     public var token: String?
     public var version: String?
-    public var deploymentConfig: RevAiApiDeploymentConfig?
+    var deploymentConfig: RevAiApiDeploymentConfig?
     public var serviceApi: String?
 }
 
