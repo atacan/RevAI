@@ -1,0 +1,294 @@
+openapi: 3.0.1
+info:
+  title: Streaming Speech-To-Text API Documentation
+  version: v1
+  description: Rev AI Streaming Speech-To-Text API Documentation
+servers:
+  - url: 'https://api.rev.ai'
+    description: Rev AI API
+security:
+  - AccessToken: []
+tags:
+  - name: Vocabularies
+paths:
+  /speechtotext/v1/vocabularies:
+    post:
+      summary: Submit Custom Vocabulary
+      operationId: SubmitCustomVocabulary
+      tags:
+        - Vocabularies
+      description: >
+        Submits a Custom Vocabulary for asynchronous processing.
+      requestBody:
+        description: Custom Vocabulary Definition
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required:
+                    - custom_vocabularies
+                  properties:
+                    metadata:
+                      description: Optional metadata that was provided during submission
+                    callback_url:
+                      description: Optional callback url to invoke when processing is complete
+                - $ref: 'src/shared.yaml#/schemas/CustomVocabulariesProperties'
+                - $ref: 'src/shared.yaml#/schemas/DescriptionlessMetadataProperties'
+                - $ref: 'src/shared.yaml#/schemas/DescriptionlessCallbackProperties'
+      responses:
+        '200':
+          $ref: '#/components/responses/CustomVocabularyDetailsResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'src/shared.yaml#/schemas/BadRequestProblemDetails'
+              example:
+                parameter:
+                  custom_vocabularies:
+                    - The custom_vocabularies field is required
+                type: https://www.rev.ai/api/v1/errors/invalid-parameters
+                title: Your request parameters didn't validate
+                status: 400
+        '401':
+          $ref: 'src/shared.yaml#/responses/Unauthorized'
+    get:
+      summary: Get List of Custom Vocabularies
+      operationId: GetCustomVocabularies
+      tags:
+        - Vocabularies
+      description: >
+        Gets a list of most recent custom vocabularies' processing information
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1000
+          required: false
+          description: Limits the number of custom vocabulary details returned, default is 100, max is 1000
+      responses:
+        '200':
+          $ref: '#/components/responses/CustomVocabulariesDetailsResponse'
+        '401':
+          $ref: 'src/shared.yaml#/responses/Unauthorized'
+        '400':
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'src/shared.yaml#/schemas/BadRequestProblemDetails'
+              example:
+                parameter:
+                  limit:
+                    - The field limit must be between 0 and 1000.
+                type: https://www.rev.ai/api/v1/errors/invalid-parameters
+                title: Your request parameters didn't validate
+                status: 400
+
+  /speechtotext/v1/vocabularies/{id}:
+    parameters:
+      - $ref: '#/components/parameters/vocabulary_id'
+    get:
+      summary: Get Custom Vocabulary
+      operationId: GetCustomVocabulary
+      tags:
+        - Vocabularies
+      description: >
+        Gets the custom vocabulary processing information
+      responses:
+        '200':
+          $ref: '#/components/responses/CustomVocabularyDetailsResponse'
+        '404':
+          $ref: '#/components/responses/CustomVocabularyNotFound'
+        '401':
+          $ref: 'src/shared.yaml#/responses/Unauthorized'
+    delete:
+      summary: Delete Custom Vocabulary
+      operationId: DeleteCustomVocabulary
+      tags:
+        - Vocabularies
+      description: >
+        Deletes a custom vocabulary. All data related to the custom vocabulary, such as webhooks and metadata, will be permanently deleted. A custom vocabulary can only be deleted once it's completed (either with success or failure).
+      responses:
+        '204':
+          description: Custom vocabulary was successfully deleted
+        '404':
+          $ref: '#/components/responses/CustomVocabularyNotFound'
+        '409':
+          $ref: '#/components/responses/CustomVocabularyInvalidDeletionState'
+        '401':
+          $ref: 'src/shared.yaml#/responses/Unauthorized'
+components:
+  securitySchemes:
+    AccessToken:
+      type: http
+      scheme: bearer
+  schemas:
+    CustomVocabularyDetails:
+      type: object
+      description: |
+        Custom Vocabulary Details
+        ***
+        Note: properties are not displayed in the returned object if they are null
+      properties:
+        id:
+          type: string
+          description: Id of the Custom Vocabulary
+          example: cvUmx5c6F7pH7r
+        status:
+          type: string
+          enum:
+            - in_progress
+            - complete
+            - failed
+          description: Current status of the custom vocabulary
+          example: complete
+        created_on:
+          type: string
+          format: dateTime
+          description: The date and time the custom vocabulary was submitted in ISO-8601 UTC form
+          example: '2018-05-05T23:23:22.29Z'
+        completed_on:
+          type: string
+          format: dateTime
+          description: The date and time the custom vocabulary was completed on, whether successful or failure, in ISO-8601 UTC form
+          nullable: true
+          example: '2018-05-05T23:28:22.29Z'
+        metadata:
+          type: string
+          description: Optional metadata that was provided during custom vocabulary submission
+          maxLength: 512
+          nullable: true
+          example: sample metadata
+        callback_url:
+          type: string
+          description: Optional callback url to invoke on custom vocabulary completion
+          nullable: true
+          example: https://www.example.com/callback
+        failure:
+          type: string
+          description: Simple reason of why the transcription job failed. Check `failure_detail` for specific details and solutions
+          enum:
+            - internal_processing
+          nullable: true
+          example: internal_processing
+        failure_detail:
+          type: string
+          description: Human-readable reason why the job failed
+          nullable: true
+          example: Failed to process. Please check your url and file type
+      example:
+        id: cvUmx5c6F7pH7r
+        status: in_progress
+        created_on: '2018-05-05T23:23:22.29Z'
+    CustomVocabulariesDetails:
+      type: array
+      description: |
+        List of Custom Vocabularies' Details
+      items:
+        type: object
+        $ref: '#/components/schemas/CustomVocabularyDetails'
+      example:
+        -
+          id: cvUmx5c6F7pH7r
+          status: in_progress
+          created_on: '2018-05-05T23:23:22.29Z'
+        -
+          id: cvx5c6F7pcvUmH
+          status: complete
+          created_on: '2018-05-05T23:23:22.29Z'
+          completed_on: '2018-05-05T23:45:13.41Z'
+          callback_url: https://www.example.com/callback
+        -
+          id: cv6F7aspH7rUmx
+          status: failed
+          created_on: '2018-05-05T23:23:22.29Z'
+          completed_on: '2018-05-05T23:23:24.11Z'
+          failure: internal_processing
+          failure_detail: Internal processing failure
+  parameters:
+    vocabulary_id:
+      name: id
+      in: path
+      description: Id of a custom vocabulary
+      required: true
+      schema:
+        type: string
+  responses:
+    CustomVocabularyDetailsResponse:
+      description: Custom Vocabulary Job Details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CustomVocabularyDetails'
+          examples:
+            New Submission for CustomVocabulary:
+              value:
+                id: cvUmx5c6F7pH7r
+                status: in_progress
+                created_on: '2018-05-05T23:23:22.29Z'
+            Complete CustomVocabulary:
+              value:
+                id: cvUmx5c6F7pH7r
+                status: complete
+                created_on: '2018-05-05T23:23:22.29Z'
+                completed_on: '2018-05-05T23:45:13.41Z'
+                callback_url: https://www.example.com/callback
+            Failed CustomVocabulary:
+              value:
+                id: cvUmx5c6F7pH7r
+                status: failed
+                created_on: '2018-05-05T23:23:22.29Z'
+                completed_on: '2018-05-05T23:23:24.11Z'
+                failure: internal_processing
+                failure_detail: Internal processing failure
+    CustomVocabulariesDetailsResponse:
+      description: List of Custom Vocabularies' Processing Details
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CustomVocabulariesDetails'
+    CustomVocabularyNotFound:
+      description: Custom Vocabulary Not Found
+      content:
+        application/problem+json:
+          schema:
+            $ref: 'src/shared.yaml#/schemas/BaseProblemDetails'
+          example:
+            type: https://www.rev.ai/api/v1/errors/custom-vocabulary-not-found
+            title: could not find custom vocabulary
+            status: 404
+    CustomVocabularyInvalidDeletionState:
+      description: Invalid Deletion State
+      content:
+        application/problem+json:
+          schema:
+            allOf:
+              - $ref: 'src/shared.yaml#/schemas/BaseProblemDetails'
+              - type: object
+                properties:
+                  current_value:
+                    type: string
+                    description: Value passed in given request
+                  allowed_values:
+                    type: array
+                    description: Allowed values for this request
+                    items:
+                      type: string
+                  detail:
+                    type: string
+                    description: Human-readable explanation specific to this occurrence of the problem
+          example:
+            allowed_values:
+              - complete
+              - failed
+            current_value: in_progress
+            type: https://rev.ai/api/v1/errors/invalid-custom-vocabulary-state
+            title: Custom vocabulary is in invalid state
+            detail: Custom vocabulary is in invalid state to be deleted
+            status: 409

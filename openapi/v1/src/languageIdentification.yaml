@@ -1,0 +1,355 @@
+tags:
+  - name: Jobs
+    description: |
+      This API provides information about the predicted languages of the provided audio file.
+      ## Key Features
+      - Top Language: Our API will predict the most probable language of the audio.
+      - Language Condidences: A list of all potential languages and their confidence scores are also returned.
+paths:
+  /jobs:
+    post:
+      summary: Submit Language Identification Job
+      operationId: SubmitLanguageIdentificationJob
+      description: |
+        Starts an asynchronous job to identify the most probable language in the audio. Audio can be specified in two ways, either by including a public url to the media via the `media_url` option or by uploading a local file as part of a multipart/form request.
+      tags:
+        - Jobs
+      requestBody:
+        description: Language Identification Job Options
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/schemas/SubmitLanguageIdentificationJobOptions'
+            examples:
+              JSON Submission:
+                value:
+                  metadata: "sample user provided metadata"
+                  callback_url: "https://www.example.com/callback"
+                  delete_after_seconds: 1000000
+                  media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                media:
+                  type: string
+                  format: binary
+                  description: 'Limited to files less than 2GB in size. If the file is larger than 2GB, submit a language id job using `media_url`. **Note:** Media files longer than 17 hours or shorter than 2 seconds are not supported for Language Identification.'
+                options:
+                  $ref: '#/schemas/SubmitLanguageIdentificationJobMultipartOptions'
+      responses:
+        '200':
+          description: Language Identification Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/schemas/LanguageIdentificationJob'
+              examples:
+                New Job:
+                  $ref: '#/examples/NewLanguageIdentificationJob'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: 'shared.yaml#/schemas/BadRequestProblemDetails'
+              examples:
+                No Input Media Url:
+                  $ref: 'shared.yaml#/responses/BadRequestNoInputMediaUrl'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '413':
+          $ref: 'shared.yaml#/responses/PayloadTooLarge'
+      x-code-samples:
+        - lang: Shell
+          label: curl
+          source: |
+            # Submit via media URL. URL must be publicly accessible and a direct link to media
+            curl -X POST "https://api.rev.ai/languageid/v1/jobs" -H "Authorization: Bearer $REV_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"metadata\": \"sample user provided metadata\", \"callback_url\": \"https://www.example.com/callback\", \"delete_after_seconds\": 1000000, \"media_url\":\"https://www.rev.ai/FTC_Sample_1.mp3\"}"
+
+            # Submit for local uploads.
+            curl -X POST "https://api.rev.ai/languageid/v1/jobs" -H "Authorization: Bearer $REV_ACCESS_TOKEN" -H "Content-Type: multipart/form-data" -F "media=@/path/to/media_file.mp3" -F "options={\"metadata\": \"sample user provided metadata\", \"callback_url\": \"https://www.example.com/callback\", \"delete_after_seconds\": 1000000}"
+    get:
+      summary: Get List of Language Identification Jobs
+      operationId: GetListOfLanguageIdentificationJobs
+      description: |
+        Gets a list of language identification jobs submitted within the last 30 days in reverse chronological order up to the provided `limit` number of jobs per call. **Note:** Jobs older than 30 days will not be listed. Pagination is supported via passing the last job `id` from a previous call into `starting_after`.
+      tags:
+        - Jobs
+      parameters:
+        - $ref : 'shared.yaml#/parameters/JobListLimit'
+        - $ref : 'shared.yaml#/parameters/JobListStartingAfter'
+      responses:
+        '200':
+          description: List of Rev AI Language Identification Jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/schemas/LanguageIdentificationJob'
+              examples:
+                Jobs Found:
+                  value:
+                    - id: Bmx5c8F5pH7a
+                      status: in_progress
+                      media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+                      created_on: '2018-05-05T23:23:22.29Z'
+                      callback_url: 'https://www.example.com/callback'
+                      type: language_id
+                    - id: 6BxQYGa638Yt
+                      status: completed
+                      media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+                      created_on: '2018-05-05T23:23:22.29Z'
+                      completed_on: '2018-05-05T23:45:13.41Z'
+                      callback_url: 'https://www.example.com/callback'
+                      type: language_id
+                No Jobs Found:
+                  value: []
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: 'shared.yaml#/schemas/BadRequestProblemDetails'
+              examples:
+                Limit Above Max Value:
+                  $ref: 'shared.yaml#/responses/BadLimitResponse'
+                Invalid Job Id:
+                  $ref: 'shared.yaml#/responses/InvalidStartingAfterResponse'
+        '401':
+          $ref: shared.yaml#/responses/Unauthorized
+  '/jobs/{id}':
+    parameters:
+      - $ref: 'shared.yaml#/parameters/JobId'
+    get:
+      summary: Get Language Identification Job By Id
+      operationId: GetLanguageIdentificationJobById
+      description: Returns information about a language identification job.
+      tags:
+        - Jobs
+      responses:
+        '200':
+          description: Language Identification Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/schemas/LanguageIdentificationJob'
+              examples:
+                New Job:
+                  $ref: '#/examples/NewLanguageIdentificationJob'
+                Completed Job:
+                  $ref: '#/examples/CompletedLanguageIdentificationJob'
+                Failed Job:
+                  $ref: '#/examples/FailedLanguageIdentificationJob'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+    delete:
+      summary: Delete Language Identification Job by Id
+      operationId: DeleteLanguageIdentificationJobById
+      description: 'Deletes a language identification job. All data related to the job will be permanently deleted. A job can only be deleted once it''s completed (either with success or failure).'
+      tags:
+        - Jobs
+      responses:
+        '204':
+          $ref: 'shared.yaml#/responses/DeleteJobSuccessful'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  $ref: 'shared.yaml#/responses/ConflictAudioAnalysisJob_InvalidDeleteState'
+  '/jobs/{id}/result':
+    get:
+      parameters:
+        - $ref: 'shared.yaml#/parameters/JobId'
+      summary: Get Language Identification Result By Id
+      operationId: GetLanguageIdentificationResultById
+      description: |
+        Returns the results for a completed language identification job.
+      tags:
+        - Jobs
+      responses:
+        '200':
+          $ref: '#/responses/SampleLanguageIdentificationResult'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  $ref: 'shared.yaml#/responses/ConflictAudioAnalysisJob_InvalidStateInProgress'
+                Failed Job:
+                  $ref: 'shared.yaml#/responses/ConflictAudioAnalysisJob_InvalidStateFailed'
+schemas:
+  LanguageIdentificationJob:
+    description: |
+      Rev AI Language Identification Job
+      ***
+      Note: properties are not displayed in the returned object if they are null
+    allOf:
+      - $ref: 'shared.yaml#/schemas/BaseAudioAnalysisJob'
+      - type: object
+        properties:
+          type:
+            type: string
+            description: The type of action performed, in this case `language_id`
+            enum:
+              - language_id
+            nullable: false
+            default: language_id
+            example: language_id
+          processed_duration_seconds:
+            type: number
+            format: double
+            description: Duration of the processed audio in seconds. Null if the job has not completed
+            nullable: true
+            example: 107.0
+    example:
+      $ref:'#/examples/NewLanguageIdentificationJob'
+  SubmitLanguageIdentificationJobOptions:
+    allOf:
+      - $ref: 'shared.yaml#/schemas/BaseAudioAnalysisSubmitJobOptions'
+  SubmitLanguageIdentificationJobMultipartOptions:
+    allOf:
+      - $ref: 'shared.yaml#/schemas/BaseSubmitJobOptions'
+  LanguageIdentificationResult:
+    description: Rev AI Language Identification Result Model
+    type: object
+    properties:
+      top_language:
+        allOf:
+          - $ref: '#/schemas/SupportedLanguages'
+          - type: object
+            description: The most probable language of the audio, in ISO 639
+      language_confidences:
+        type: array
+        items:
+          type: object
+          properties:
+            language:
+              allOf:
+                - $ref: '#/schemas/SupportedLanguages'
+                - type: object
+                  description: The probable language of the audio, in ISO 639
+            confidence:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+              description: |
+                Confidence score of the possible predicted language
+  SupportedLanguages:
+    type: string
+    enum:
+      - ar
+      - cmn
+      - cs
+      - de
+      - el
+      - en
+      - es
+      - fi
+      - fr
+      - hu
+      - it
+      - ja
+      - lt
+      - lv
+      - nl
+      - pl
+      - pt
+      - ro
+      - ru
+      - sl
+      - sv
+      - tr
+    x-enumDescriptions:
+      ar: Arabic
+      cmn: Mandarin
+      cs: Czech
+      de: German
+      el: Greek
+      en: English
+      es: Spanish
+      fi: Finnish
+      fr: French
+      hu: Hungarian
+      it: Italian
+      ja: Japanese
+      lt: Lithuanian
+      lv: Latvian
+      nl: Dutch
+      pl: Polish
+      pt: Portuguese
+      ro: Romanian
+      ru: Russian
+      sl: Slovenian
+      sv: Swedish
+      tr: Turkish
+responses:
+  SampleLanguageIdentificationResult:
+    description: |
+      Rev AI API Language Identification Result
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/LanguageIdentificationResult'
+        example:
+          top_language: "en"
+          language_confidences:
+            - language: "en"
+              confidence: 0.907
+            - language: "nl"
+              confidence: 0.023
+            - language: "ar"
+              confidence: 0.023
+            - language: "de"
+              confidence: 0.023
+            - language: "cmn"
+              confidence: 0.023
+examples:
+  NewLanguageIdentificationJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: in_progress
+      media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+      created_on: '2018-05-05T23:23:22.29Z'
+      callback_url: 'https://www.example.com/callback'
+      type: language_id
+  CompletedLanguageIdentificationJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: completed
+      media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+      created_on: '2018-05-05T23:23:22.29Z'
+      completed_on: '2018-05-05T23:45:13.41Z'
+      callback_url: 'https://www.example.com/callback'
+      type: language_id
+      processed_duration_seconds: 107.07
+  FailedLanguageIdentificationJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: failed
+      media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+      created_on: '2018-05-05T23:23:22.29Z'
+      completed_on: '2018-05-05T23:23:24.11Z'
+      callback_url: 'https://www.example.com/callback'
+      failure: internal_processing
+      failure_detail: Internal processing failed
+      type: language_id

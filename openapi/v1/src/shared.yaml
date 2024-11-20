@@ -1,0 +1,502 @@
+schemas:
+  BaseApiJob:
+    type: object
+    properties:
+      id:
+        $ref: '#/schemas/JobIdField'
+      created_on:
+        $ref: '#/schemas/CreatedOnField'
+      completed_on:
+        $ref: '#/schemas/CompletedOnField'
+      metadata:
+        $ref: '#/schemas/MetadataField'
+      failure_detail:
+        $ref: '#/schemas/FailureDetailField'
+      callback_url:
+        $ref: '#/schemas/CallbackUrlField'
+      delete_after_seconds:
+        $ref: '#/schemas/DeleteAfterSecondsField'
+  BaseSubmitJobOptions:
+    type: object
+    properties:
+      metadata:
+        $ref: '#/schemas/MetadataField'
+      callback_url:
+        $ref: '#/schemas/CallbackUrlField'
+      delete_after_seconds:
+        $ref: '#/schemas/DeleteAfterSecondsField'
+  BaseAudioAnalysisSubmitJobOptions:
+    allOf:
+      - $ref: '#/schemas/BaseSubmitJobOptions'
+      - type: object
+        required:
+            - media_url
+        properties:
+          media_url:
+            $ref: '#/schemas/AudioAnalysisMediaUrlField'
+  BaseTextAnalysisSubmitJobOptions:
+    allOf:
+      - $ref: '#/schemas/BaseSubmitJobOptions'
+      - type: object
+        properties:
+          language:
+            $ref: '#/schemas/TextAnalysisLanguageField'
+          text:
+            nullable: true
+            type: string
+            example: 'Plain text I would like processed.'
+            description: |
+              Plain text to be analyzed in this job submission. No timestamps will be included in the response if input is provided this way.
+          json:
+            nullable: true
+            description: |
+              Rev AI transcript to be analyzed in this job submission. With this input timestamps will be in result.
+            allOf:
+              - $ref: 'shared.yaml#/schemas/Transcript'
+  BaseAudioAnalysisJob:
+    allOf:
+      - $ref: '#/schemas/BaseApiJob'
+      - type: object
+        properties:
+          status:
+            $ref: '#/schemas/AudioAnalysisStatusField'
+          failure:
+            $ref: '#/schemas/AudioAnalysisFailureField'
+          media_url:
+            $ref: '#/schemas/AudioAnalysisMediaUrlField'
+  BaseTextAnalysisJob:
+    allOf:
+      - $ref: '#/schemas/BaseApiJob'
+      - type: object
+        properties:
+          status:
+            $ref: '#/schemas/TextAnalysisStatusField'
+          failure:
+            $ref: '#/schemas/TextAnalysisFailureField'
+          language:
+            $ref: '#/schemas/TextAnalysisLanguageField'
+          word_count:
+            $ref: '#/schemas/TextAnalysisWordCountField'
+  AudioAnalysisStatusField:
+    type: string
+    enum:
+      - in_progress
+      - completed
+      - failed
+    description: Current status of the job.
+    example: completed
+  AudioAnalysisFailureField:
+    type: string
+    description: Simple reason of why the job failed. Check `failure_detail` for specific details and solutions.
+    enum:
+      - internal_processing
+      - insufficient_balance
+      - invoicing_limit_exceeded
+  TextAnalysisStatusField:
+    type: string
+    enum:
+      - in_progress
+      - completed
+      - failed
+    description: Current status of the job.
+    example: completed
+  TextAnalysisFailureField:
+    type: string
+    description: Simple reason of why the job failed. Check `failure_detail` for specific details and solutions.
+    enum:
+      - internal_processing
+      - insufficient_balance
+      - invoicing_limit_exceeded
+      - input_too_small
+      - input_too_large
+  TextAnalysisLanguageField:
+    type: string
+    description: The user input language of the transcript.
+    enum:
+      - en
+    example: en
+    nullable: true
+    default: en
+  TextAnalysisWordCountField:
+    type: integer
+    description: The amount of words processed.
+    example: 4231
+    nullable: true
+  AudioAnalysisMediaUrlField:
+    type: string
+    maxLength: 2048
+    description: The user input media url.
+    nullable: false
+  CreatedOnField:
+    type: string
+    format: date-time
+    description: The date and time the job was created in ISO-8601 UTC form.
+    example: '2018-05-05T23:23:22.29Z'
+  CompletedOnField:
+    type: string
+    format: date-time
+    description: The date and time the job was completed, whether successfully or failing, in ISO-8601 UTC form.
+    nullable: true
+    example: '2018-05-05T23:28:22.29Z'
+  JobIdField:
+    type: string
+    description: Id of the job.
+    example: Umx5c6F7pH7r
+  MetadataField:
+    type: string
+    maxLength: 512
+    description: Optional metadata that was provided during job submission.
+    nullable: true
+  FailureDetailField:
+    type: string
+    description: Human-readable reason why the job failed.
+    nullable: true
+    example: Internal server error.
+  CallbackUrlField:
+    type: string
+    maxLength: 1024
+    description: Callback url provided by the user.
+    nullable: true
+  DeleteAfterSecondsField:
+    description: Amount of time after job completion when job is auto-deleted. Present only when preference set in job request.
+    type: integer
+    minimum: 0
+    maximum: 2592000
+    nullable: true
+  TsField:
+    type: number
+    description: |
+      The timestamp of the beginning of the element relative to the beginning of the audio in seconds (centisecond precision).
+  EndTsField:
+    type: number
+    description: |
+      The timestamp of the end of the element relative to the beginning of the audio in seconds (centisecond precision).
+  NullableTsField:
+    nullable: true
+    allOf:
+      - $ref: '#/schemas/TsField'
+  NullableEndTsField:
+    nullable: true
+    allOf:
+      - $ref: '#/schemas/EndTsField'
+  SpeakerField:
+    type: integer
+    description: Id of the speaker of the monologue.
+    example: 1
+  SpeakerInfoField:
+    type: object
+    nullable: true
+    description: Information about the speaker for this monologue. Null if speaker_names option not provided or no speaker name detected.
+    properties:
+      id:
+        type: integer
+        description: Id of the speaker of the monologue
+        example: 1
+      display_name:
+        type: string
+        description: Human readable name of the speaker that was provided
+        example: Jane Doe
+  CustomVocabulariesField:
+    type: array
+    minItems: 1
+    maxItems: 50
+    items:
+      type: object
+      description: Contains a collection of phrases. Custom vocabulary informs and biases the speech recognition to find those phrases (at the cost of slightly slower transcription).
+      required:
+        - phrases
+      properties:
+        phrases:
+          type: array
+          minItems: 1
+          maxItems: 6000
+          description: |
+            Array of phrases not found in normal dictionary. Add technical jargon, proper nouns and uncommon phrases as strings in this array to add them to the lexicon for this job.
+
+            A phrase must contain at least 1 alpha character but may contain any non-numeric character from the Basic Latin set. A phrase can contain up to 12 words. Each word can contain up to 34 characters.
+
+            **Note**: Only 6000 phrases can be used per transcription job. For more details, check [Custom Vocabularies](https://www.rev.ai/docs/overview#section/Features/Custom-Vocabularies).
+          items:
+            type: string
+            title: phrase
+          example: ['Paul McCartney', 'Amelia Earhart', 'Weiss-Bergman', 'BLM']
+  Transcript:
+    type: object
+    description: |
+      Rev AI Transcript Model
+    properties:
+      monologues:
+        type: array
+        items:
+          type: object
+          properties:
+            speaker:
+              $ref: '#/schemas/SpeakerField'
+            speaker_info:
+              $ref: '#/schemas/SpeakerInfoField'
+            elements:
+              type: array
+              description: Array of transcript elements
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum:
+                      - text
+                      - punct
+                      - unknown
+                    description: 'Type of transcript element.'
+                    example: text
+                  value:
+                    type: string
+                    description: Value of the transcript element.
+                    example: Hello
+                  ts:
+                    $ref: '#/schemas/NullableTsField'
+                  end_ts:
+                    $ref: '#/schemas/NullableEndTsField'
+                  confidence:
+                    type: number
+                    format: double
+                    nullable: true
+                    minimum: 0
+                    maximum: 1
+                    description: 'Confidence score of the provided value. If the element `type` is `punct` or `unknown`, confidence will be `null`'
+                    example: 0.85
+  DescriptionlessMetadataProperties:
+    type: object
+    properties:
+      metadata:
+        type: string
+        maxLength: 512
+        nullable: true
+        example: sample metadata
+  DescriptionlessCallbackProperties:
+    type: object
+    properties:
+      callback_url:
+        type: string
+        nullable: true
+        example: https://www.example.com/callback
+  CustomVocabulariesProperties:
+    type: object
+    properties:
+      custom_vocabularies:
+        $ref: '#/schemas/CustomVocabulariesField'
+  BaseProblemDetails:
+    type: object
+    description: Problem details object returned on errors
+    properties:
+      title:
+        type: string
+        description: Short, human-readable summary of the problem type
+      type:
+        type: string
+        description: URI that identifies the problem
+      status:
+        type: integer
+        description: HTTP status code of the error
+  BadRequestProblemDetails:
+    allOf:
+      - $ref: '#/schemas/BaseProblemDetails'
+      - type: object
+        properties:
+          parameters:
+            description: 'Invalid properties object where each property is the key, mapped to a list of reasons why the property is invalid'
+            type: object
+            additionalProperties: true
+  InvalidStateDetails:
+    allOf:
+      - $ref: '#/schemas/BaseProblemDetails'
+      - type: object
+        properties:
+          current_value:
+            type: string
+            description: Value passed in given request
+          allowed_values:
+            type: array
+            description: Allowed values for this request
+            items:
+              type: string
+          detail:
+            type: string
+            description: Human-readable explanation specific to this occurrence of the problem
+parameters:
+  JobId:
+    name: id
+    in: path
+    description: Rev AI API Job Id
+    required: true
+    schema:
+      type: string
+  JobListLimit:
+    in: query
+    name: limit
+    schema:
+      type: integer
+      default: 100
+      maximum: 1000
+      minimum: 0
+      nullable: true
+    required: false
+    description: 'Limits the number of jobs returned, default is 100, max is 1000'
+  JobListStartingAfter:
+    in: query
+    name: starting_after
+    schema:
+      type: string
+      nullable: true
+    required: false
+    description: 'If specified, returns jobs submitted before the job with this id, exclusive (job with this id is not included)'
+responses:
+  JobNotFound:
+    description: Job Not Found
+    content:
+      application/problem+json:
+        schema:
+          $ref: '#/schemas/BaseProblemDetails'
+        example:
+          type: 'https://www.rev.ai/api/v1/errors/job-not-found'
+          title: could not find job
+          status: 404
+  Unauthorized:
+    description: |
+      Request Unauthorized
+    content:
+      application/problem+json:
+        schema:
+          properties:
+            title:
+              type: string
+              description: Short, human-readable summary of the problem type
+            status:
+              type: integer
+              description: HTTP status code of the error
+        example:
+          title: Authorization has been denied for this request
+          status: 401
+  DeleteJobSuccessful:
+     description: |
+       Job was successfully deleted
+     content: {}
+  BadLimitResponse:
+    value:
+      parameters:
+        limit:
+          - The max value for limit is 1000
+      type: https://www.rev.ai/api/v1/errors/invalid-parameters
+      title: Your request parameters didn't validate
+      status: 400
+  InvalidStartingAfterResponse:
+    value:
+      parameters:
+        starting_after:
+          - Invalid job ID
+      type: 'https://www.rev.ai/api/v1/errors/invalid-parameters'
+      title: Your request parameters didn't validate
+      status: 400
+  BadRequestNoInputText:
+    value:
+      parameters:
+        json:
+          - Empty input, neither JSON or plain text input was provided
+        text:
+          - Empty input, neither JSON or plain text input was provided
+      type: 'https://www.rev.ai/api/v1/errors/invalid-parameters'
+      title: Your request parameters didn't validate
+      status: 400
+  BadRequestBothJsonText:
+    value:
+      parameters:
+        json:
+          - Only one of JSON and plaintext may be provided
+        text:
+          - Only one of JSON and plaintext may be provided
+      type: 'https://www.rev.ai/api/v1/errors/invalid-parameters'
+      title: Your request parameters didn't validate
+      status: 400
+  BadRequestNoInputMediaUrl:
+    value:
+      parameters:
+        media_url:
+          - The medis_url field is required
+      type: 'https://www.rev.ai/api/v1/errors/invalid-parameters'
+      title: Your request parameters didn't validate
+      status: 400
+  PayloadTooLarge:
+    description: |
+      Payload Too Large
+    content:
+      application/problem+json:
+        schema:
+          properties:
+            title:
+              type: string
+              description: 'Short, human-readable summary of the problem type'
+            detail:
+              type: string
+              description: Human-readable explanation specific to this occurrence of the problem
+            status:
+              type: integer
+              description: HTTP status code of the error
+        example:
+          title: Payload Too Large
+          detail: Submitted payload exceeds maximum allowed file size
+          status: 413
+  ConflictTextAnalysisJob_InvalidStateInProgress:
+    value:
+      allowed_values:
+        - completed
+      current_value: in_progress
+      type: 'https://rev.ai/api/v1/errors/invalid-job-state'
+      title: Job is in invalid state
+      detail: Job is in invalid state to obtain the output
+      status: 409
+  ConflictTextAnalysisJob_InvalidStateFailed:
+    value:
+      allowed_values:
+        - completed
+      current_value: failed
+      type: 'https://rev.ai/api/v1/errors/invalid-job-state'
+      title: Job is in invalid state
+      detail: Job is in invalid state to obtain the output
+      status: 409
+  ConflictTextAnalysisJob_InvalidDeleteState:
+    value:
+      allowed_values:
+        - completed
+        - failed
+      current_value: in_progress
+      type: 'https://rev.ai/api/v1/errors/invalid-job-state'
+      title: Job is in invalid state
+      detail: Job is in invalid state to be deleted
+      status: 409
+  ConflictAudioAnalysisJob_InvalidStateInProgress:
+    value:
+      allowed_values:
+        - completed
+      current_value: in_progress
+      type: 'https://rev.ai/api/v1/errors/invalid-job-state'
+      title: Job is in invalid state
+      detail: Job is in invalid state to obtain the output
+      status: 409
+  ConflictAudioAnalysisJob_InvalidStateFailed:
+    value:
+      allowed_values:
+        - completed
+      current_value: failed
+      type: 'https://rev.ai/api/v1/errors/invalid-job-state'
+      title: Job is in invalid state
+      detail: Job is in invalid state to obtain the output
+      status: 409
+  ConflictAudioAnalysisJob_InvalidDeleteState:
+    value:
+      allowed_values:
+        - completed
+        - failed
+      current_value: in_progress
+      type: 'https://rev.ai/api/v1/errors/invalid-job-state'
+      title: Job is in invalid state
+      detail: Job is in invalid state to be deleted
+      status: 409

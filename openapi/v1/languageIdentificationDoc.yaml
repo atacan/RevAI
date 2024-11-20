@@ -1,0 +1,27 @@
+openapi: 3.0.1
+info:
+  termsOfService: https://www.rev.ai/about/terms
+  title: Rev AI Language Identification
+  contact:
+    email: support@rev.ai
+    name: Rev
+    url: 'https://www.rev.ai/'
+  version: v1
+  description: Rev AI Language Identification
+servers:
+  - url: 'https://api.rev.ai'
+    description: Rev AI API
+security:
+  - AccessToken: []
+paths:
+  /languageid/v1/jobs:
+    $ref: 'src/languageIdentification.yaml#/paths/~1jobs'
+  /languageid/v1/jobs/{id}:
+    $ref: 'src/languageIdentification.yaml#/paths/~1jobs~1%7Bid%7D'
+  /languageid/v1/jobs/{id}/result:
+    $ref: 'src/languageIdentification.yaml#/paths/~1jobs~1%7Bid%7D~1result' 
+components:
+  securitySchemes:
+    AccessToken:
+      type: http
+      scheme: bearer

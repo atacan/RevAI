@@ -1,0 +1,33 @@
+﻿openapi: 3.0.1
+info:
+  title: Asynchronous Speech-To-Text API Documentation
+  contact:
+    email: support@rev.com
+    name: Rev
+    url: 'https://www.rev.ai/'
+  version: v1
+  description: |
+    Asynchronous Speech-To-Text API Documentation
+  termsOfService: 'https://www.rev.ai/about/terms'
+servers:
+  - url: 'https://api.rev.ai/speechtotext/v1'
+    description: Rev AI API
+security:
+  - AccessToken: []
+paths:
+  '/jobs/{id}':
+    $ref: 'src/asyncTranscription.yaml#/paths/~1jobs~1%7Bid%7D'
+  '/jobs':
+    $ref: 'src/asyncTranscription.yaml#/paths/~1jobs'
+  '/jobs/{id}/transcript':
+    $ref: 'src/asyncTranscription.yaml#/paths/~1jobs~1%7Bid%7D~1transcript'
+  '/jobs/{id}/captions':
+    $ref: 'src/asyncTranscription.yaml#/paths/~1jobs~1%7Bid%7D~1captions'
+  '/account':
+    $ref: 'src/accounts.yaml#/paths/~1account'
+components:
+  securitySchemes:
+    AccessToken:
+      type: http
+      scheme: bearer
+

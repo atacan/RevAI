@@ -1,0 +1,29 @@
+openapi: 3.0.1
+info:
+  termsOfService: https://www.rev.ai/about/terms
+  title: Rev AI Diarization Early Access 
+  contact:
+    email: support@rev.ai
+    name: Rev
+    url: 'https://www.rev.ai/'
+  version: v1alpha
+  description: |
+    # Quick Start
+    Follow the [getting started checklist](https://www.rev.ai/getting_started)
+servers:
+  - url: 'https://api.rev.ai'
+    description: Rev AI API
+security:
+  - AccessToken: []
+paths:
+  /diarization/v1alpha/jobs:
+    $ref: 'src/diarization.yaml#/paths/~1jobs'
+  /diarization/v1alpha/jobs/{id}:
+    $ref: 'src/diarization.yaml#/paths/~1jobs~1%7Bid%7D'
+  /diarization/v1alpha/jobs/{id}/result:
+    $ref: 'src/diarization.yaml#/paths/~1jobs~1%7Bid%7D~1result' 
+components:
+  securitySchemes:
+    AccessToken:
+      type: http
+      scheme: bearer

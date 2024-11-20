@@ -1,0 +1,376 @@
+tags:
+  - name: Jobs
+    description: |
+      This feature is in open beta through Rev AI Labs.
+      This API provides information about topics discussed in conversation. To see our topic extraction API in practice you'll need
+      either a [transcript](https://www.rev.ai/docs#tag/Transcript) generated from our [speech-to-text API](https://www.rev.ai/docs) or a
+      conversation in plain text.
+      ## Key Features
+      - Topic List: Our API will identify the topics discussed and assign them contextual scores. This yields insights into not only
+        which topics are discussed, but how prominent they are in the conversation.
+      - Informant List: Each topic identified will include a list of phrases that inform the topic's discussion. When a Rev AI transcript
+        is the submission format, these informants will include timing information that allow the user to track where in the conversation
+        these topics are discussed.
+paths:
+  /jobs:
+    post:
+      summary: Submit Topic Extraction Job
+      operationId: SubmitTopicExtractionJob
+      description: |
+        Starts an asynchronous job to extract topics from a transcript.
+        The transcript can be supplied through `text` as plain text or `json` as a [rev.com transcript format](https://www.rev.ai/docs#tag/Transcript)
+      tags:
+        - Jobs
+      requestBody:
+        description: Topic Extraction Job Options
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/schemas/SubmitTopicExtractionJobOptions'
+            examples:
+              JSON Submission:
+                value:
+                  language: en
+                  metadata: 'sample user provided metadata'
+                  callback_url: 'https://www.example.com/callback'
+                  delete_after_seconds: 1000000
+                  json:
+                    monologues:
+                      - speaker: 1
+                        elements:
+                          - type: 'text'
+                            value: 'hello'
+                            ts: 0.75
+                            end_ts: 1.25
+                            confidence: 0.85
+              Plain Text Submission:
+                value:
+                  language: en
+                  metadata: 'sample user provided metadata'
+                  callback_url: 'https://www.example.com/callback'
+                  delete_after_seconds: 1000000
+                  text: 'Plain text I would like topic extraction performed on'
+      responses:
+        '200':
+          description: Topic Extraction Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/schemas/TopicExtractionJob'
+              examples:
+                New Job:
+                  $ref: '#/examples/NewTopicExtractionJob'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: 'shared.yaml#/schemas/BadRequestProblemDetails'
+              examples:
+                No Input Text:
+                  $ref: 'shared.yaml#/responses/BadRequestNoInputText'
+                Both Json and Plaintext Provided:
+                  $ref: 'shared.yaml#/responses/BadRequestBothJsonText'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '413':
+          $ref: 'shared.yaml#/responses/PayloadTooLarge'
+    get:
+      summary: Get List of Topic Extraction Jobs
+      operationId: GetListOfTopicExtractionJobs
+      description: |
+        Gets a list of topic extraction jobs submitted within the last 30 days in reverse chronological order up to the provided `limit` number of jobs per call. **Note:** Jobs older than 30 days will not be listed. Pagination is supported via passing the last job `id` from a previous call into `starting_after`.
+      tags:
+        - Jobs
+      parameters:
+        - $ref : 'shared.yaml#/parameters/JobListLimit'
+        - $ref : 'shared.yaml#/parameters/JobListStartingAfter'
+      responses:
+        '200':
+          description: List of Rev AI Topic Extraction Jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/schemas/TopicExtractionJob'
+              examples:
+                Jobs Found:
+                  value:
+                    - id: Bmx5c8F5pH7a
+                      status: completed
+                      language: en
+                      created_on: '2018-05-05T23:23:22.29Z'
+                      completed_on: '2018-05-05T23:45:13.41Z'
+                      callback_url: 'https://www.example.com/callback'
+                      type: topic_extraction
+                    - id: 6BxQYGa638Yt
+                      status: completed
+                      language: en
+                      created_on: '2018-05-05T23:23:22.29Z'
+                      completed_on: '2018-05-05T23:45:13.41Z'
+                      callback_url: 'https://www.example.com/callback'
+                      word_count: 4231
+                      type: topic_extraction
+                No Jobs Found:
+                  value: []
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: 'shared.yaml#/schemas/BadRequestProblemDetails'
+              examples:
+                Limit Above Max Value:
+                  $ref: 'shared.yaml#/responses/BadLimitResponse'
+                Invalid Job Id:
+                  $ref: 'shared.yaml#/responses/InvalidStartingAfterResponse'
+        '401':
+          $ref: shared.yaml#/responses/Unauthorized
+  '/jobs/{id}':
+    parameters:
+      - $ref: 'shared.yaml#/parameters/JobId'
+    get:
+      summary: Get Topic Extraction Job By Id
+      operationId: GetTopicExtractionJobById
+      description: Returns information about a topic extraction job
+      tags:
+        - Jobs
+      responses:
+        '200':
+          description: Topic Extraction Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/schemas/TopicExtractionJob'
+              examples:
+                New Job:
+                  $ref: '#/examples/NewTopicExtractionJob'
+                Completed Job:
+                  $ref: '#/examples/CompletedTopicExtractionJob'
+                Failed Job:
+                  $ref: '#/examples/FailedTopicExtractionJob'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+    delete:
+      summary: Delete Topic Extraction Job by Id
+      operationId: DeleteTopicExtractionJobById
+      description: 'Deletes a topic extraction job. All data related to the job will be permanently deleted. A job can only be deleted once it''s completed (either with success or failure).'
+      tags:
+        - Jobs
+      responses:
+        '204':
+          $ref: 'shared.yaml#/responses/DeleteJobSuccessful'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  $ref: 'shared.yaml#/responses/ConflictTextAnalysisJob_InvalidDeleteState'
+  '/jobs/{id}/result':
+    get:
+      parameters:
+        - $ref: 'shared.yaml#/parameters/JobId'
+        - $ref: '#/parameters/threshold'
+      summary: Get Topic Extraction Result By Id
+      operationId: GetTopicExtractionResultById
+      description: |
+        Returns the results for a completed topic extraction job.
+      tags:
+        - Jobs
+      responses:
+        '200':
+          $ref: '#/responses/SampleTopicExtractionResult'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  $ref: 'shared.yaml#/responses/ConflictTextAnalysisJob_InvalidStateInProgress'
+                Failed Job:
+                  $ref: 'shared.yaml#/responses/ConflictTextAnalysisJob_InvalidStateFailed'
+schemas:
+  TopicExtractionJob:
+    description: |
+      Rev AI Topic Extraction Job
+      ***
+      Note: properties are not displayed in the returned object if they are null
+    allOf:
+      - $ref: 'shared.yaml#/schemas/BaseTextAnalysisJob'
+      - type: object
+        properties:
+          type:
+            type: string
+            description: The type of action performed, in this case `topic_extraction`
+            enum:
+              - topic_extraction
+            nullable: false
+            default: topic_extraction
+            example: topic_extraction
+    example:
+      $ref:'#/examples/NewTopicExtractionJob'
+  SubmitTopicExtractionJobOptions:
+    allOf:
+      - $ref: 'shared.yaml#/schemas/BaseTextAnalysisSubmitJobOptions'
+  BaseInformant:
+    properties:
+      content:
+        type: string
+        description: Portion of the input transcript that informed this topic choice
+  TranscriptSubmissionInformants:
+    type: array
+    items:
+      allOf:
+        - $ref: '#/schemas/BaseInformant'
+        - type: object
+          properties:
+            ts:
+              $ref: 'shared.yaml#/schemas/TsField'
+            end_ts:
+              $ref: 'shared.yaml#/schemas/EndTsField'
+  TextSubmissionInformants:
+    type: array
+    items:
+      allOf:
+        - $ref: '#/schemas/BaseInformant'
+        - type: object
+          properties:
+            offset:
+              type: number
+              description: |
+                Number of characters (excluding newline characters such as `\n` or `\r`) in the input leading up to the
+                content of this message. Only included if input to sentiment analysis was plain text.
+            length:
+              type: number
+              description: |
+                Number of characters (excluding newline characters such as `\n` or `\r`) in the content. Only included
+                if input to sentiment analysis was plain text.
+  TopicExtractionResult:
+    description: Rev AI Topic Extraction Result Model
+    type: object
+    properties:
+      topics:
+        type: array
+        items:
+          type: object
+          properties:
+            topic_name:
+              type: string
+              description: Name of the detected topic. Topics will always consist of content that existed within the input transcript
+            score:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+              description: |
+                Score of the topic, similar to confidence scores in our speech to text api.
+                The higher the score, the more likely we think it is that this is a topic of the input transcript
+            informants:
+              description: |
+                All of the pieces of content from the transcript which our engine detected as being relevant to this topic. Positional properties will be different
+                depending on the type of submission.
+              oneOf:
+                - $ref: '#/schemas/TranscriptSubmissionInformants'
+                - $ref: '#/schemas/TextSubmissionInformants'
+parameters:
+  threshold:
+    name: threshold
+    in: query
+    description: Score threshold for topics. If specified all topics with a score lower than this threshold will be filtered out
+    schema:
+      type: number
+      default: 0.3
+      minimum: 0
+      maximum: 1.0
+      nullable: true
+responses:
+  SampleTopicExtractionResult:
+    description: |
+      Rev AI API Topic Result
+    content:
+      application/vnd.rev.topic.v1.0+json:
+        schema:
+          $ref: '#/schemas/TopicExtractionResult'
+        examples:
+          Transcript Job Submission:
+            value:
+              topics:
+                - topic_name: 'incredible team'
+                  score: 0.9
+                  informants:
+                    - content: 'We have 17 folks and, uh, I think we have an incredible team and I just want to talk about some things that we''ve done that I think have helped us get there.'
+                      ts: 71.4
+                      end_ts: 78.39
+                    - content: 'Some people think that you can raise money and spend a few weeks building your team and then move on to more.'
+                      ts: 84.21
+                      end_ts: 88.47
+                - topic_name: 'quick background'
+                  score: 0.6
+                  informants:
+                    - content: 'Um, I want to give you a quick background on myself.'
+                      ts: 55.92
+                      end_ts: 58.17
+          Plain Text Job Submission:
+            value:
+              topics:
+                - topic_name: 'incredible team'
+                  score: 0.9
+                  informants:
+                    - content: 'We have 17 folks and, uh, I think we have an incredible team and I just want to talk about some things that we''ve done that I think have helped us get there.'
+                      offset: 0
+                      length: 157
+                    - content: 'Some people think that you can raise money and spend a few weeks building your team and then move on to more.'
+                      offset: 160
+                      length: 109
+                - topic_name: 'quick background'
+                  score: 0.6
+                  informants:
+                    - content: 'Um, I want to give you a quick background on myself.'
+                      offset: 13
+                      length: 52
+examples:
+  NewTopicExtractionJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: in_progress
+      language: en
+      created_on: '2018-05-05T23:23:22.29Z'
+      callback_url: 'https://www.example.com/callback'
+      type: topic_extraction
+  CompletedTopicExtractionJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: completed
+      language: en
+      created_on: '2018-05-05T23:23:22.29Z'
+      completed_on: '2018-05-05T23:45:13.41Z'
+      callback_url: 'https://www.example.com/callback'
+      word_count: 4231
+      type: topic_extraction
+  FailedTopicExtractionJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: failed
+      language: en
+      created_on: '2018-05-05T23:23:22.29Z'
+      completed_on: '2018-05-05T23:23:24.11Z'
+      callback_url: 'https://www.example.com/callback'
+      failure: internal_processing
+      failure_detail: Internal processing failed
+      type: topic_extraction

@@ -1,0 +1,267 @@
+tags:
+  - name: Diarization
+    description: |
+      This API provides information about speaker diarization of the provided audio file.
+      ## Key Features
+      - Speaker number labels
+      - Speaker timings
+paths:
+  /jobs:
+    post:
+      summary: Submit Diarization Job
+      operationId: SubmitDiarizationJob
+      description: |
+        Starts an asynchronous job to identify speaker segments in the audio.
+      tags:
+        - Diarization
+      requestBody:
+        description: Diarization Job Options
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/schemas/SubmitDiarizationJobOptions'
+            examples:
+              Example Submission:
+                value:
+                  metadata: "sample user provided metadata"
+                  callback_url: "https://www.example.com/callback"
+                  delete_after_seconds: 1000000
+                  media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+      responses:
+        '200':
+          description: Diarization Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/schemas/DiarizationJob'
+              examples:
+                New Job:
+                  $ref: '#/examples/NewDiarizationJob'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: 'shared.yaml#/schemas/BadRequestProblemDetails'
+              examples:
+                No Input Media Url:
+                  $ref: 'shared.yaml#/responses/BadRequestNoInputMediaUrl'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+    get:
+      summary: Get List of Diarization Jobs
+      operationId: GetListOfDiarizationJobs
+      description: |
+        Gets a list of Diarization jobs submitted within the last 30 days in reverse chronological order up to the provided `limit` number of jobs per call. **Note:** Jobs older than 30 days will not be listed. Pagination is supported via passing the last job `id` from a previous call into `starting_after`.
+      tags:
+        - Diarization
+      parameters:
+        - $ref : 'shared.yaml#/parameters/JobListLimit'
+        - $ref : 'shared.yaml#/parameters/JobListStartingAfter'
+      responses:
+        '200':
+          description: List of Rev AI Diarization Jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/schemas/DiarizationJob'
+              examples:
+                Jobs Found:
+                  value:
+                    - id: Bmx5c8F5pH7a
+                      status: in_progress
+                      media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+                      created_on: '2018-05-05T23:23:22.29Z'
+                      callback_url: 'https://www.example.com/callback'
+                      type: diarization
+                    - id: 6BxQYGa638Yt
+                      status: completed
+                      media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+                      created_on: '2018-05-05T23:23:22.29Z'
+                      completed_on: '2018-05-05T23:45:13.41Z'
+                      callback_url: 'https://www.example.com/callback'
+                      type: diarization
+                No Jobs Found:
+                  value: []
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: 'shared.yaml#/schemas/BadRequestProblemDetails'
+              examples:
+                Limit Above Max Value:
+                  $ref: 'shared.yaml#/responses/BadLimitResponse'
+                Invalid Job Id:
+                  $ref: 'shared.yaml#/responses/InvalidStartingAfterResponse'
+        '401':
+          $ref: shared.yaml#/responses/Unauthorized
+  '/jobs/{id}':
+    parameters:
+      - $ref: 'shared.yaml#/parameters/JobId'
+    get:
+      summary: Get Diarization Job By Id
+      operationId: GetDiarizationJobById
+      description: Returns information about a Diarization job.
+      tags:
+        - Diarization
+      responses:
+        '200':
+          description: Diarization Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/schemas/DiarizationJob'
+              examples:
+                New Job:
+                  $ref: '#/examples/NewDiarizationJob'
+                Completed Job:
+                  $ref: '#/examples/CompletedDiarizationJob'
+                Failed Job:
+                  $ref: '#/examples/FailedDiarizationJob'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+    delete:
+      summary: Delete Diarization Job by Id
+      operationId: DeleteDiarizationJobById
+      description: 'Deletes a Diarization job. All data related to the job will be permanently deleted. A job can only be deleted once it''s completed (either with success or failure).'
+      tags:
+        - Diarization
+      responses:
+        '204':
+          $ref: 'shared.yaml#/responses/DeleteJobSuccessful'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  $ref: 'shared.yaml#/responses/ConflictAudioAnalysisJob_InvalidDeleteState'
+  '/jobs/{id}/result':
+    get:
+      parameters:
+        - $ref: 'shared.yaml#/parameters/JobId'
+      summary: Get Diarization Result By Id
+      operationId: GetDiarizationResultById
+      description: |
+        Returns the results for a completed Diarization job.
+      tags:
+        - Diarization
+      responses:
+        '200':
+          $ref: '#/responses/SampleDiarizationResult'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  $ref: 'shared.yaml#/responses/ConflictAudioAnalysisJob_InvalidStateInProgress'
+                Failed Job:
+                  $ref: 'shared.yaml#/responses/ConflictAudioAnalysisJob_InvalidStateFailed'
+schemas:
+  DiarizationJob:
+    description: |
+      Rev AI Diarization Job
+      ***
+      Note: properties are not displayed in the returned object if they are null
+    allOf:
+      - $ref: 'shared.yaml#/schemas/BaseAudioAnalysisJob'
+      - type: object
+        properties:
+          type:
+            type: string
+            description: The type of action performed, in this case `diarization`
+            enum:
+              - diarization
+            nullable: false
+            default: diarization
+            example: diarization
+    example:
+      $ref:'#/examples/NewDiarizationJob'
+  SubmitDiarizationJobOptions:
+    allOf:
+      - $ref: 'shared.yaml#/schemas/BaseAudioAnalysisSubmitJobOptions'
+  DiarizationResult:
+    description: Rev AI Diarization Result Model
+    type: object
+    properties:
+      speaker_count:
+        type: number
+        description: The number of speakers in the audio
+      segments:
+        type: array
+        items:
+          type: object
+          properties:
+            speaker:
+              $ref: 'shared.yaml#/schemas/SpeakerField'
+            ts:
+              $ref: 'shared.yaml#/schemas/TsField'
+            end_ts:
+              $ref: 'shared.yaml#/schemas/EndTsField'
+responses:
+  SampleDiarizationResult:
+    description: |
+      Diarization Result
+      ***
+      Note: Diarization MIME Type is required in the Accept header.
+    content:
+      application/vnd.rev.diarization.v1.0+json:
+        schema:
+          $ref: '#/schemas/DiarizationResult'
+        example:
+          speaker_count: 2
+          segments:
+            - speaker: 1
+              ts: 0.5
+              end_ts: 2.85
+            - speaker: 2
+              ts: 3
+              end_ts: 7.78
+examples:
+  NewDiarizationJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: in_progress
+      media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+      created_on: '2018-05-05T23:23:22.29Z'
+      callback_url: 'https://www.example.com/callback'
+      type: diarization
+  CompletedDiarizationJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: completed
+      media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+      created_on: '2018-05-05T23:23:22.29Z'
+      completed_on: '2018-05-05T23:45:13.41Z'
+      callback_url: 'https://www.example.com/callback'
+      type: diarization
+  FailedDiarizationJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: failed
+      media_url: "https://www.rev.ai/FTC_Sample_1.mp3"
+      created_on: '2018-05-05T23:23:22.29Z'
+      completed_on: '2018-05-05T23:23:24.11Z'
+      callback_url: 'https://www.example.com/callback'
+      failure: internal_processing
+      failure_detail: Internal processing failed
+      type: diarization

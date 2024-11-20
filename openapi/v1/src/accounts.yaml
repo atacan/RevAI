@@ -1,0 +1,70 @@
+tags:
+  - name: Accounts
+    description: Everything about your Account
+paths:
+  '/account':
+    get:
+      summary: Get Account
+      operationId: GetAccount
+      description: Get the developer's account information
+      tags:
+        - Accounts
+      responses:
+        '200':
+          description: Rev AI Account
+          content:
+            application/json:
+              schema:
+                $ref: '#/schemas/Account'
+        '401':
+          $ref: shared.yaml#/responses/Unauthorized
+      x-code-samples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -X GET "https://api.rev.ai/speechtotext/v1/account" -H "Authorization: Bearer $REV_ACCESS_TOKEN"
+        - lang: Python
+          source: |
+            from rev_ai import apiclient
+            access_token = 'your_access_token'
+
+            # Create client with your access token
+            client = apiclient.RevAiAPIClient(access_token)
+
+            # Get account info
+            account = client.get_account()
+            print(account.email)
+            print(account.balance_seconds)
+        - lang: JavaScript
+          label: Node
+          source: |
+            import { RevAiApiClient } from 'revai-node-sdk';
+            var accessToken = "yourAccessToken";
+
+            // Initialize your client with your access token
+            var client = new RevAiApiClient(accessToken);
+
+            // Get account info
+            var account = await client.getAccount();
+        - lang: Java
+          source: |
+            String accessToken = "Your Access Token";
+
+            // Initialize your client with your access token
+            ApiClient apiClient = new ApiClient(accessToken);
+
+            // Get account info
+            RevAiAccount account = apiClient.getAccount();
+schemas:
+  Account:
+    type: object
+    description: Rev AI Account Model
+    properties:
+      email:
+        type: string
+        description: Email of developer account
+        example: jay@rev.ai
+      balance_seconds:
+        type: integer
+        description: Amount of Rev AI API credits remaining in seconds
+        example: 150

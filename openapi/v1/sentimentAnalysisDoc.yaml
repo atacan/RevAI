@@ -1,0 +1,27 @@
+openapi: 3.0.1
+info:
+  title: |
+    Rev AI Sentiment Analysis API
+  contact:
+    email: labs@rev.ai
+    name: Rev
+    url: 'https://www.rev.ai/'
+  version: v1
+  description: Rev AI Sentiment Analysis API
+servers:
+  - url: 'https://api.rev.ai'
+    description: Rev AI API
+security:
+  - AccessToken: []
+paths:
+  /sentiment_analysis/v1/jobs:
+    $ref: 'src/sentimentAnalysis.yaml#/paths/~1jobs'
+  /sentiment_analysis/v1/jobs/{id}:
+    $ref: 'src/sentimentAnalysis.yaml#/paths/~1jobs~1%7Bid%7D'
+  /sentiment_analysis/v1/jobs/{id}/result:
+    $ref: 'src/sentimentAnalysis.yaml#/paths/~1jobs~1%7Bid%7D~1result'
+components:
+  securitySchemes:
+    AccessToken:
+      type: http
+      scheme: bearer

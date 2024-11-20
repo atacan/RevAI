@@ -1,0 +1,1573 @@
+openapi: 3.0.1
+info:
+  title: On Premise V2 Speech-To-Text API Documentation
+  contact:
+    email: support@rev.com
+    name: Rev
+    url: 'https://www.rev.ai/'
+  version: 1.0.0
+  description: |
+    # Knowledge Requirements
+    This guide is written for developers and is best understood by those with previous knowledge of the following technologies:
+
+    - Docker
+    - REST API
+    - Redis
+
+    # Getting Access to the Image
+
+    The Rev AI On Prem V2 images cannot be accessed by the general public on Docker Hub. Customers have to be given permission to view the repository and pull Docker images. Redistribution of the images is limited to the contract signed by the customer.
+
+    1. If you don't yet have a Docker Hub account you'll need to create one. This can be done here: [dockerhub.com/signup](https://hub.docker.com/signup).
+    2. Send an email to your Rev AI contact or [support@rev.ai](mailto:support@rev.ai) and provide them with your Docker Hub username.
+
+    Once the account is given access, Rev AI will send out an email to notify you that access was granted.
+
+    # Downloading the Image
+
+    The images are under the Docker Hub repository, `revdotcom/revai`. In order to download the images you must be first logged in to a Docker Hub account that has pull access. You can do this from the command line by pasting the following snippet and replacing the username and password values with your own.
+
+    ```
+    $ docker login --username YOUR_USER_NAME --password YOUR_PASSWORD
+    ```
+
+    The next step is to pull the image from Docker Hub.
+
+    ```
+    $ docker pull revdotcom/revai:<TAG_VERSION>
+    ```
+
+    ## Available Tags
+
+    The On Prem V2 deployment is split into two images: `Workers` and `Gateway`.
+    As of this documentation, the following tags are the latest available tags:
+    - workers-2.2.1
+    - gateway-2.2.0
+
+    If you encounter the following error when downloading please reach out to our team by email at `support@rev.ai`.
+    ```
+    Error response from daemon: pull access denied for revdotcom/revai, repository does not exist or may require 'docker login': denied: requested access to the resource is denied
+    ```
+
+    # Environment Variables
+    To configure the container at launch, the user can provide the following environment variables:
+
+    ## Gateway Environment Variables
+
+    ### Required Environment Variables
+
+    | Variable | Type | Description |
+    |---|---|---|
+    | `Initialization__AccessToken` | string | Your Rev AI account access token. A valid token must be provided in order for the container to authenticate. |
+    | `Redis__Endpoints` | string | Endpoints for the Redis instance. |
+    | `Redis__KeyPrefix` | string | Prefix to given to all keys stored into Redis for this application to maintain key isolation across shared environments. |
+    | `Redis__Database`  | number | Which database Redis should connect to. Should be the same as the `RedisConfig__Database` value provided to the `Workers`. |
+    | `Revspeech__CompletionQueue` | string | Key prefix for the Redis-based queue that the `Gateway` pulls jobs from. |
+
+    #### Queue Environment Configuration
+
+    At least one of the following `Worker` submission queue environment variable is required. This ensures that the `Gateway` is able to submit transcription jobs.
+
+    | Variable | Type | Default | Description |
+    |---|---|---|---|
+    | `Revspeech__SubmissionQueue` | string | null | Key prefix for the Redis-based queue that the `Gateway` submits English jobs to. Should be configured the same as the `InboundQueueName` environment variable in the English `Workers` deployment. |
+    | `Revspeech__SubmissionQueueFrench` | string | null | Key prefix for the Redis-based queue that the `Gateway` submits French jobs to. Should be configured the same as the `InboundQueueName` environment variable in the French `Workers` deployment. |
+    | `Revspeech__SubmissionQueueSpanish` | string | null | Key prefix for the Redis-based queue that the `Gateway` submits Spanish jobs to. Should be configured the same as the `InboundQueueName` environment variable in the Spanish `Workers` deployment. |
+
+    ### Optional Environment Variables
+
+    | Variable | Type | Default | Description |
+    |---|---|---|---|
+    | `Initialization__CallbackUrl` | string | null | When the container initialization succeeds or fails a `POST` request is made to this address if provided. |
+    | `Initialization__Attempts` | number | 5 | The number of attempts made to reach the initialization callback before failure. |
+    | `Initialization__RetryDelayMs` | number | 1000 | The amount of time in milliseconds between each attempt to POST to the initialization callback. |
+    | `Initialization__SkipSandboxExternalCalls` | bool | false | Skips initialization and billing requests and sends a successful `POST` request to the initialization callback url, only applies to the `Gateway` sandbox. |
+    | `Billing__Endpoint` | string | `https://api.rev.ai/external/v2/billing` | The provided endpoint is responsible for forwarding the billing request to `https://api.rev.ai/external/v2/billing`. |
+    | `Logging__DefaultLogLevel` | number | 2 | The verbosity of the docker logs. <br/> 0 = TRACE <br/> 1 = DEBUG <br/> 2 = INFO <br/> 3 = WARN <br/> 4 = ERROR |
+    | `Logging__LogTemplate` | string | null | Default = Json format, non-indented. <br/> Sample text format: `[\{Timestamp:HH:mm:ss} \{Level:u3}] {Message:lj} {NewLine} {Properties}{NewLine}`. |
+    | `Redis__EnableTls` | boolean | false | Whether Redis requests are required to be sent via ssl. |
+    | `Redis__Password` | string | null | Password used to connect to the provided Redis instance. |
+    | `Revspeech__MediaAuthorizationHeader` | string | null | Authorization header value used when accessing the `media_url` provided. Should be configured the same as the `MediaAuthorizationHeader` environment variable in the `Worker` deployment. If provided, the value is added as an `Authorization` header when downloading the provided `media_url` during transcription. |
+    | `Revspeech__SubmissionQueue` | string | null | Key prefix for the Redis-based queue that the `Gateway` submits English jobs to. Should be configured the same as the `InboundQueueName` environment variable in the English `Workers` deployment. |
+    | `Revspeech__SubmissionQueueFrench` | string | null | Key prefix for the Redis-based queue that the `Gateway` submits French jobs to. Should be configured the same as the `InboundQueueName` environment variable in the French `Workers` deployment. |
+    | `Revspeech__SubmissionQueueSpanish` | string | null | Key prefix for the Redis-based queue that the `Gateway` submits Spanish jobs to. Should be configured the same as the `InboundQueueName` environment variable in the Spanish `Workers` deployment. |
+    | `AzureBlobStorage__ConnectionString` | string | null | Azure Blob Storage connection string to authenticate and connect with if Azure Blob Storage is to be used as the file storage system. This value takes priority over `AzureBlobStorage__ContainerUri`. Requires `AzureBlobStorage__ContainerName` to be provided as well.  |
+    | `AzureBlobStorage__ContainerName` | string | null | Azure Blob Container to put storage files into. Required if `AzureBlobStorage__ConnectionString` is provided. |
+    | `AzureBlobStorage__ContainerUri` | string | null | Azure Blob Container URI to connect to. Uses `DefaultAzureCredential` to authenticate. It is recommended to pass credentials via environment variables. See: [DefaultAzureCredentaisl](https://docs.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet). |
+    | `AzureBlobStorage__DisableSignedUrl` | bool | false | Whether the Blob storage should use signed urls to retrieve stored files. If `true`, all stored Blob urls are unsigned and accessed using the connection policy. |
+    | `Metrics__Queue__LoggingIntervalSeconds` | int | 5 | The amount of time in seconds between each publishing of Prometheus metrics. Must be between 1 and 300, inclusive. |
+    | `ShutdownTimeoutSeconds` | number | 300 | The number of seconds after shutdown has been initiated that background tasks wait to finish. Bear in mind that docker has its own shutdown timeout defaulted to 10 seconds, so that will be needed to increase whenever `ShutdownTimeoutSeconds` is increased. |
+
+    ## Workers Environment Variables
+
+    ### Required Environment Variables
+
+    | Variable | Type | Description |
+    |---|---|---|
+    | `AccessToken` | string | Your Rev AI account access token. A valid token must be provided in order for the container to authenticate. |
+    | `RedisConfig__Endpoints` | string | Endpoints for the Redis instance. |
+    | `RedisConfig__KeyPrefix` | string | Prefix to given to all keys stored into Redis for this application to maintain key isolation across shared environments. |
+    | `RedisConfig__Database` | number | Which database Redis should connect to. Should be the same as the `Redis__Database` value provided to the `Gateway`. |
+    | `InboundQueueName` | string | Key prefix for the Redis-based queue that the worker instance pulls job from. Should be configured the same as the `Revspeech__SubmissionQueue` environment variable in the `Gateway` deployment. |
+
+    ###  Optional Environment Variables
+
+    | Variable | Type | Default | Description |
+    |---|---|---|---|
+    | `InitializationCallbackUrl` | string | null | When the container initialization succeeds or fails a `POST` request is made to this address if provided. |
+    | `Runner__CountThreads` | number | 1 | The number of workers available for the container to process job chunks. Each worker can process one chunk at a time so the higher the number of workers the more chunks can be processed in parallel. |
+    | `Runner__LogLevel` | number | 2 | The verbosity of the docker logs. <br/> 0 = TRACE <br/> 1 = DEBUG <br/> 2 = INFO <br/> 3 = WARN <br/> 4 = ERROR |
+    | `InitializationAttempts` | number | 5 | The number of attempts made to reach the initialization callback before failure. |
+    | `InitializationRetryDelayMs` | number | 1000 | The amount of time in milliseconds between each attempt to POST to the initialization callback. |
+    | `MediaAuthorizationHeader` | string | null | Authorization header value used when accessing the `media_url` provided. Should be configured the same as the `Revspeech__MediaAuthorizationHeader` environment variable in the `Gateway` deployment. If provided, the value is added as an `Authorization` header when downloading the provided `media_url` during transcription. |
+    | `OnPremBillingEndPoint` | string | `https://api.rev.ai/external/v2/billing` | The provided endpoint is responsible for forwarding the billing request to `https://api.rev.ai/external/v2/billing`. |
+    | `Runner__LogTemplate` | string | null | Default = Json format, non-indented. <br/> Sample text format: `[\{Timestamp:HH:mm:ss} \{Level:u3}] {Message:lj} {NewLine} {Properties}{NewLine}`. |
+    | `RedisConfig__EnableTls` | boolean | false | Whether Redis requests are required to be sent via ssl. |
+    | `RedisConfig__Password` | string | null | Password used to connect to the provided Redis instance. |
+    | `AzureBlobConfig__ConnectionString` | string | null | Azure Blob Storage connection string to authenticate and connect with if Azure Blob Storage is to be used as the file storage system. This value takes priority over `AzureBlobConfig__ContainerUri`. Requires `AzureBlobConfig__ContainerName` to be provided as well.  |
+    | `AzureBlobConfig__ContainerName` | string | null | Azure Blob Container to put storage files into. Required if `AzureBlobConfig__ConnectionString` is provided. |
+    | `AzureBlobConfig__ContainerUri` | string | null | Azure Blob Container URI to connect to. Uses `DefaultAzureCredential` to authenticate. It is recommended to pass credentials via environment variables. See: [DefaultAzureCredentaisl](https://docs.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet). |
+    | `AzureBlobConfig__DisableSignedUrl` | bool | false | Whether the Blob storage should use signed urls to retrieve stored files. If `true`, all stored Blob urls are unsigned and accessed using the connection policy. |
+    | `ShutdownTimeoutSeconds` | number | 300 | The number of seconds after shutdown has been initiated that background tasks wait to finish. Bear in mind that docker has its own shutdown timeout defaulted to 10 seconds, so that will be needed to increase whenever `ShutdownTimeoutSeconds` is increased. |
+
+    # Networking
+
+    Both the `Gateway` and `Workers` require an open network connection for authentication and initialization.
+
+    If instead you would prefer to whitelist specific urls, the containers require communication with the following:
+
+    - `https://api.rev.ai/external/v2/initialize`
+    - `https://api.rev.ai/external/v2/billing`
+
+    ## Initialization
+
+    The `POST` request to `/initialize` is a required licensing request to Rev.ai's servers. It verifies the On Prem containers' license against your Rev.ai account. The request contains the following information:
+
+    `access_token` - Customer's token provided to verify that they are signed up to use On Prem and to tell the container which account to charge to.
+
+    `container_key` - A unique container key identifying the On Prem container image hardcoded into the container itself.
+
+    `container_version` - The version of the container that is sending the initialization request, this is equivalent to the tag of the container image.
+
+    Example request:
+
+    ```
+    Authorization: Bearer YOUR_ACCOUNT_TOKEN
+
+    {
+      "container_key":"UnIqUeKeY",
+      "container_version":"gateway-0.1.0"
+    }
+    ```
+
+    Log Message on Successful Initialization:
+    ```
+    2021-09-14 06:56:11.568	 Initialization response user token is "v3|fV5_-QZjdRV-DWdRb-EUBtk7TqruQkQvVSmhg4jPU7XYkc79qxFzzevUzsEVfsPTNfQB6g"
+    ```
+
+    **We maintain there will be no customer data ever in this request**
+
+    ## Billing
+
+    Both the `Gateway` and `Workers` make a `POST` request to `/billing`. The billing requests from the `Workers` are used for logging purposes by the Rev AI team for accounting. The billing request from the `Gateway` contains the actual duration of the overall job. The requests contain the following:
+
+    **Headers**
+
+    `x-rev-signature` - Signature which verifies the integrity of the request.
+
+    `x-rev-billing-type`- Billing request type, can be `api` or `worker`.
+
+    **Body**
+
+    `duration` - A numeric value for that either contains the total duration in seconds of the job or a duration for accounting purposes.
+
+    `reference_id` - A universally unique identifier.
+
+    `request_sent_on` - A date time stamp of when this request was made.
+
+    `revaiapi_endpoint` - An http url that the customer can use to forward the request to if they wish to implement a sidecar to inspect this billing request before it reaches Rev AI's server.
+
+    `user_token` - A string in the following format: `v3|someString`. See initialization log message above for example.
+
+    `language` - Language code of the job. Currently defaults to `en`.
+
+    `metadata` - Metadata provided by the customer on the job. Only present in the `Gateway` billing request
+
+    Request example:
+
+    ```
+    x-rev-signature: Example+hash+token=
+    x-rev-billing-type: api
+    {
+      "reference_id": "example-1111-1111-1111",
+      "duration": 5.87,
+      "request_sent_on": "2020-03-30T04:29:59.7351045Z",
+      "revaiapi_endpoint": "https://api.rev.ai/external/v2/billing",
+      "user_token": "v3|someuniquestring",
+      "language": "en",
+      "metadata": "My custom metadata"
+    }
+    ```
+
+    ### Response
+
+    The response from Rev AI confirms the billing request. On the `Gateway` side, this clears the container to release the transcript.
+
+    `x-rev-signature` - Signature which verifies the integrity of the request.
+
+    `reference_id` - A universally unique identifier.
+
+    Response example:
+
+    ```
+    x-rev-signature: Example+hash+token=
+    {
+      "reference_id": "example-1111-1111-1111",
+    }
+    ```
+
+    # Resource Requirements
+
+    ## Gateway Resources
+
+    The `Gateway` acts as an API server and does workflow processing of each job. A minimum of 1 core and 4GB of memory is required, however we recommend the `Gateway` to be run on 4 cores and 16GB of memory.
+
+    ## Workers Resources
+
+    ### CPU and Memory Requirements
+
+    The number of resources required varies depending on the number of workers each container has been initialized with using the `Runner__CountThreads` variable. The number of workers dictates the number of chunks that can be transcribed in parallel. Each job that is submitted to the `Gateway` is divided into 3 minute chunks. i.e. if the submitted job is 5 minutes long, there will be 2 chunks for workers to work on. Having 2 workers will allow for parallelized processing.
+
+    **Rev AI's cloud API uses `C5.2XLarge` AWS Instances for 4 workers.**
+
+    As a base, using a single speech-to-text worker, the container requires at least 5GB of RAM. The table below provides information on the memory requirements for up to 4 workers. In the event you wish to run more you can use the equation in the table to approximate the required amount.
+
+    | Worker Count | Minimum Memory |
+    | ---          | ---            |
+    | 1 | 5 GB |
+    | 2 | 6 GB |
+    | 3 | 7 GB |
+    | 4 | 8 GB |
+    | x | (1x + 4) GB |
+
+    ### Disk Requirements
+
+    The workers will download the provided `media_url` into local storage before performing transcription. While files are cleaned up after processing, it is recommended to have sufficient disk space attached to each container to accomodate the number of parallel workers (`Runner__CountThreads`) and possible parallel jobs that the container can be running at any given time.
+
+    **Rev AI attaches a 100GB volume mount to each container we run with Runner__CountThreads=4.**
+
+    ## Redis Requirements
+
+    Intermediate transcript files and job data are stored in the provided Redis instance for a period of 24 hours. The Redis instance must be provisioned with enough memory to handle the number of jobs over a 24 hour period. Users can manually clear the space in Redis by deleting jobs once they complete and have received their transcripts.
+
+    **~1350 hours of transcribed audio can be stored in a 16GB Redis instance over a 24 hour period.**
+
+    # Starting the Containers
+
+    There are multiple ways to start the containers: `docker run`, `docker-compose` or `kubernetes`. In this guide we will provide examples for `docker run`.
+
+    ## Starting From the Docker Run Command
+
+    From the command line run the following:
+
+    ```
+    # Gateway
+    $ docker run -p YOUR_PORT:80 -e Initialization__AccessToken=YOUR_REV_AI_ACCESS_TOKEN -e Redis__Endpoints=YOUR_REDIS_ENDPOINT -e Redis__KeyPrefix=YOUR_KEY_PREFIX -e  Redis__Database=YOUR_REDIS_DATABASE -e Revspeech__SubmissionQueue=revspeech-submission -e Revspeech__CompletionQueue=revspeech-completion
+    revdotcom/revai:gateway-<TAG_VERSION>
+
+    # Workers
+    $ docker run -e AccessToken=YOUR_REV_AI_ACCESS_TOKEN -e RedisConfig__Endpoints=YOUR_REDIS_ENDPOINT -e RedisConfig__KeyPrefix=YOUR_KEY_PREFIX -e  RedisConfig__Database=YOUR_REDIS_DATABASE -e InboundQueueName=revspeech-submission revdotcom/revai:workers-<TAG_VERSION>
+    ```
+
+    ## File Storage
+
+    Due to the nature of having persistent files over a 24 hour period, an object based file storage system is required to be configured as transcripts and other intermediate outputs from the `Workers` are stored and referenced to. Examples of cloud-based file storages include S3 and Azure blob storage. The file storage needs to support the following:
+
+    - Uploading of files/objects referenced via a key/path structure
+    - Retrieving of files/objects referenced via a key/path structure
+    - Deleting of files/objects referenced via a key/path structure
+
+    The `Gateway` and `Workers` by default have a Redis-backed file storage system implementation built in.
+
+    ### Azure Blob Storage
+
+    Optionally, the On Prem V2 images can be configured to use Azure Blob Storage. There are two ways to configure Azure Blob Storage:
+
+    1. With a `ConnectionString` and `ContainerName`.
+    2. With a `ContainerUri`.
+
+    If a [Azure Blob Connection String](https://docs.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string) is provided, a `ContainerName` must also be provided. `ContainerUri` is only used if `ContainerString` is `null`, otherwise `ContainerString` and `ContainerName` takes priority over `ContainerUri`.
+
+    If a [Azure Container Uri](https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#resource-uri-syntax) is provided, then it is assumed the instance where On Prem V2 is launched has permissions to access the provided Blob Container. See [DefaultAzureCredential](https://docs.microsoft.com/en-us/dotnet/api/azure.identity.defaultazurecredential?view=azure-dotnet). The recommened pattern is to provide the following [Environment Variables](https://docs.microsoft.com/en-us/dotnet/api/azure.identity.environmentcredential?view=azure-dotnet) in the container: `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`.
+
+    **Required Azure Blob Permissions:**
+
+    The container makes the following calls to the provided Blob Container:
+
+    - Upload Blob
+    - Delete Blob
+    - Get Blob (Only if `DisableSignedUrl` property is `true`)
+    - Generate SAS Uri
+
+    Please make sure the configuration allows for On Prem V2 to make these API calls. All operations follow standard Azure API service limits.
+
+    **Signed Uris**
+
+    By default, references to Azure Blobs are stored with [signed SAS Uris](https://docs.microsoft.com/en-us/azure/storage/common/storage-sas-overview). If the customer does not wish for signed uris to be stored or passed around, the containers can be started with `DisableSignedUrl` configuration. Setting `DisabledSignedUrl=true` will use the Blob uris directly without any signatures. In this case, the container must be configured to have permissions to access the Blob directly.
+
+    **Blob Storage Prefix and Lifecycle**
+
+    Each image will store their files with a given Blob prefix. The `Gateway` will have its files in the `<Blob_Container_Name>` container with the `/gateway` as the path prefix to all Blobs. `Workers` will have `/workers` as it's prefix. By default, these files are not cleaned up automatically. **It is highly recommended to put a lifecycle rule on the Blob Container to auto-delete up these Blob prefixes.**
+
+    ## Database
+
+    On Prem V2 also introduces the concept of the `job` data model. To have these models persist for 24 hours, a NoSQL-styled document database is required. Examples of cloud solutions similar to the database provided include `DynamoDb` and `MongoDb` The required operations and functionalities for the document database are the basic CRUD operations:
+
+    - Create Object
+    - Update Object
+    - Get Object(s)
+    - Delete Objects
+    - Indexing Objects
+    - Primary Key
+
+    The `Gateway` and `Workers` by default have a Redis-backed database implementation built in. **Note this database's items expire after 24 hours.**
+
+    ## Message Queue
+
+    Communication between the two services is done via a messaging queue. The queue and messages supports the following:
+
+    - Receive Message
+    - Delete Message
+    - Set Message Invisibility
+    - Refresh Message Invisibility
+    - Message Expiration
+    - Best effort ordering
+
+    The `Gateway` and `Workers` by default have a Redis-backed message queue system implementation built in.
+
+    ## License Expiry
+
+    Both the `Gateway` and `Workers` containers have a 24 hour expiration limit. 24 hours after the container has started, a `sigterm` signal is sent to the application. During this `sigterm` period, the application prevents new workflows/jobs to be processed and waits for all processing workflows/jobs to be completed. Once completed, the container is shutdown.
+
+    # Using On Prem V2
+
+    ## When Are the Containers Ready?
+
+    Upon startup both the `Gateway` and `Workers` containers will attempt to authenticate with Rev AI by sending a `POST` request to the `https://api.rev.ai/external/v2/initialize` endpoint. After the container receives a response, if the `Initialization__CallbackUrl` or `InitializationCallbackUrl` are provided, the containers will then send a POST request to that url. This `POST` contains the initialization status.
+
+    Successful `POST` body:
+    ```
+    { "success": true }
+    ```
+
+    Failed `POST` body:
+    ```
+    { "success": false }
+    ```
+
+    ## Submitting a Job for Transcription
+
+    Once both the `Gateway` and `Workers` images are running, you can submit a file by making a `POST` request to `/speechtotext/v1/jobs` endpoint of the `Gateway` container with the proper parameters in the request body. Once the job is submitted, the user can query the status of the job and transcript via the API exposed in the `Gateway`. Outlined in the section titled `API Reference` is an overview of the available endpoints and features for On Prem V2. As On Prem V2 is meant to keep near feature parity with the Cloud API, the precise API and model documentation can be found in the [Cloud API Reference](https://rev.ai/docs).
+
+    ## Gateway Workflow
+
+    When the job is created, it is stored into the Redis instance and is available to be queried for 24 hours before expiring (if not deleted). During this process, the job status can be:
+    `in_progress`, `transcribed` or `failed`. The job will be placed into a workflow where it will be processed for transcription. During this workflow phase, any unexpected failures will result in a retry, until the 2 hour transcription expiration is reached. At this point, if the job has not yet completed, the job will be failed with `internal_processing`.
+
+    ## Audio Duration Detection
+
+    Internally, the `Gateway` uses [Ffprobe](https://ffmpeg.org/ffprobe.html) and the audio's metadata to determine the length of the audio. **On Prem V2 has a audio duration maximum of 15 hours, and a minimum of 2 seconds.**. A corrupted or malformed audio where the audio duration cannot be detected may result in the job being failed prematurely.
+
+    ## Chunking
+
+    On Prem V2 uses chunking to perform transcription. Chunking means the `Workers` will process 3 minute segments of the provided audio and parallelize the transcription step across these 3 minute chunks. The resultant individual transcripts are then combined into a singluar transcript. This drastically reduces the RTF of transcription. You can expect to recieve an hour long audio file to be transcribed in about 3-5 minutes so long as there are enough `Workers` to handle all the individual chunks.
+
+    ```
+    # Log message from the Gateway when submitting chunks
+    2021-09-14 07:33:53.437	Submitting 4 chunks
+    ```
+
+    ## Message Queue
+
+    Before jobs are picked up by the `Workers`, the messages are submitted to a message queue. `Workers` read from the queue, however the jobs are not removed from the queue right away. They are instead marked as invisibile until the `Workers` finish processing the job. During the processing of the message, the `Workers` will refresh this invisibility, as it expires in 5 minutes otherwise. Once the `Workers` finish processing the job, they delete the job from the message queue. In the case that the `Workers` crash or an unexpected failure occurs, the message invisibility will expire in 5 minutes and the message be picked up by another `Workers` instance if available.
+
+    ```
+    # Log message from the Workers regarding message refresh
+    2021-09-14 06:57:50.000	Refreshed the message "cec74fc6-8561-4a78-bf14-92af5560c527" from inbound queue
+
+    ```
+
+    ## Speech-to-Text Workers
+
+    Each `Workers` application maintains set stateless speech-to-text `worker` threads. The number of `worker` threads can be configured by setting `Runner__CountThreads`.
+
+    The speech-to-text `worker` performs the actual speech-to-text processing. The `media_url` provided is first downloaded and then transcoded using [Ffmpeg](https://ffmpeg.org/ffmpeg.html). Once processing, the job will continue either to failure or success. In the case of terminal failures, like invalid media or empty audio duration, the failure will propagate back to the `Gateway` and the entire job will be failed. In the case of retriable failures, e.g instance shutdown, `worker` will mark the job for a retry so another `worker` can process it. In either sucess or failure case, the `worker` submit a response message back to the `Gateway's` configured `Revspeech__CompletionQueue`.
+
+    On successful transcription, the `worker` will upload their results to file storage.
+
+    ```
+    # Sample log output for a sucessful job, aggregated by RevRequestId
+
+    2021-09-14 06:56:11.568	Message received with delay 6.29 seconds
+    2021-09-14 06:56:11.578	Received SQS message
+    2021-09-14 06:56:11.600	skipping connection for inactive worker "postprocessing"
+    2021-09-14 06:56:11.601	Claiming worker id: "Ctm-968bb075-a1ba-42c0-af80-9cfc5181dae4" "3"
+    2021-09-14 06:56:11.602	skipping connection for inactive worker "secondpd"
+    2021-09-14 06:56:11.602	Acquired "ctm" worker with WorkerId: "Ctm-968bb075-a1ba-42c0-af80-9cfc5181dae4_3"
+    2021-09-14 06:56:11.605	Created transcription log: "/tmp/tmpjOh7j6.tmp"
+    2021-09-14 06:56:11.636	Refreshed the message "ddac8e67-07d8-41b7-b535-3e5f22548212" from inbound queue
+    2021-09-14 06:56:11.679	"Download" 19631KB file too fast to measure
+    2021-09-14 06:56:11.833	"Copy file stream" 19631KB in 0.1536749: 127744 KB/sec
+    2021-09-14 06:56:11.845	Process has been started
+    2021-09-14 06:56:11.926	Found EOF in ffprobe stdout
+    2021-09-14 06:56:11.938	Process has been started
+    2021-09-14 06:56:12.013	Process has been started
+    2021-09-14 06:56:12.034	Found EOF in ffprobe stdout
+    2021-09-14 06:56:12.043	Starting CV handling "completed" in 0.0 sec
+    2021-09-14 06:56:12.043	Starting ctm
+    2021-09-14 06:56:12.043	Tracking job completion time, estimated duration: 135 seconds
+    2021-09-14 06:57:37.195	Received workerResponse with status Success
+    2021-09-14 06:57:37.195	Ctm ran for 85 seconds for 180 seconds audio
+    ...
+    2021-09-14 06:57:37.358	Sending response SQS message
+    2021-09-14 06:57:37.358	Job completed
+    ```
+
+    ```
+    # Log when the job is canceled due to shutdown and scheduled for retry
+
+    2021-09-14 06:57:37.195 Job execution was canceled
+    ```
+
+    ## Foreign Language Speech-to-Text Workers
+
+    Optional foreign language `Workers` are available for non-english jobs. The supported languages and the corresponding image tags are:
+    - French: fr-workers-2.1.1
+    - Spanish: es-workers-2.1.1
+
+    The transcription proess with foreign language `Workers` are the same as for English `Workers`.
+
+    To utilize a single `Gateway` deployment with multiple languages of `Workers`, the enviornment variables `Revspeech__SubmissionQueueFrench` and `Revspeech__SubmissionQueueSpanish` should be uniquely provided, then specify the `language` option upon job submission.
+
+    Alternatively, having separate `Gateway`/`Workers` deployments are also valid. In this case, `Gateway` should set the language-specific `Revspeech__SubmissionQueue*` to be used with the corresponding `Workers` deployment.
+
+    ## Webhooks/Callbacks
+
+    If a `callback_url` is provided, the `Gateway` workflow will `POST` to the `callback_url` when the entire job has been processed. The callback will be retried for 24 hours in the case of non-2xx responses. A `410` response from the `callback_url` will also indicate that the callback should not be retried.
+
+    ### Callback Body
+
+    ```
+    # Successful Job Callback Body
+    {
+      "job": {
+        "id": "Umx5c6F7pH7r",
+        "status": "transcribed",
+        "created_on": "2018-05-05T23:23:22.29Z",
+        "callback_url": "https://www.example.com/callback",
+        "duration_seconds": 356.24,
+        "media_url": "https://www.rev.ai/FTC_Sample_1.mp3"
+      }
+    }
+    ```
+
+    ```
+    # Failed Job Callback Body
+    {
+      "job": {
+        "id": "Umx5c6F7pH7r",
+        "status": "failed",
+        "created_on": "2018-05-05T23:23:22.29Z",
+        "callback_url": "https://www.example.com/callback",
+        "failure": "internal_processing",
+        "failure_detail": "Unexpected error has occured."
+      }
+    }
+
+    ```
+
+    ```
+    # Log when callback is scheduled and completed
+
+    2021-09-14 07:08:25.759	scheduling webhook invocation: "2f219fee-5c9e-4093-a9ef-62550422b979"/"rWRa02HX2dtcZ"
+    ...
+    2021-09-14 7:08:26.492	Sent callback, success: True, server returned 200
+    ```
+
+    ## Prometheus Metrics
+
+    The On Prem V2 containers publish the following metrics to their `/metrics` endpoint, which can be used by [Prometheus](https://prometheus.io/docs/introduction/overview/).
+
+    ### Gateway
+
+    ##### Queue Metrics
+
+    The following Redis-based Queue metrics are queried and published on a interval defined by the `Gateway` variable `Metrics__Queue__LoggingIntervalSeconds`. Decreasing this value will causing the metrics to be more frequently updated at the cost of higher load on the Redis instance and `Gateway`.
+
+    - `Gateway` queue total items (`gateway_total_item_count`)
+    - `Gateway` queue invisible (in progress) items (`gateway_invisible_item_count`)
+    - English `Workers` queue total items (`workers_total_item_count`)
+    - English `Workers` queue invisible (in progress) items (`workers_invisible_item_count`)
+    - French `Workers` queue total items (`french_workers_total_item_count`)
+    - French `Workers` queue invisible (in progress) items (`french_workers_invisible_item_count`)
+    - Spanish `Workers` queue total items (`spanish_workers_total_item_count`)
+    - Spanish `Workers` queue invisible (in progress) items (`spanish_workers_invisible_item_count`)
+
+    These metrics can be found in Prometheus by using the label filter `{ on_prem_v2_label="queue_metrics" }`. Note the `Workers` queue metrics are only available if the corresponding `Revspeech__SubmissionQueue*` environment variables were provided.
+
+    #### Gateway External Request Failure Metrics
+
+      - Number of billing request failures (`gateway_billing_request_failure_{statusCodeInt}`)
+      - Number of billing response verification failures (`gateway_billing_response_verification_failure`)
+      - Number of failures from invoking the initialization callback after a successful initialization (`gateway_initialization_success_callback_failure_{statusCodeInt}`)
+      - Number of failures from invoking the initialization callback after a failed initialization (`gateway_initialization_failure_callback_failure_{statusCodeInt}`)
+      - Number of failures from invoking the job completion webhook (`gateway_job_completion_webhook_failure_{statusCodeInt}`)
+
+    These metrics that contain `statusCodeInt` are labeled with `status_code_3xx`, `status_code_4xx`, and `status_code_5xx` failures based on their failure codes
+
+    ### Workers
+
+    #### Worker Count Metrics
+
+    The number of speech-to-text workers initialized are recorded by the `Workers` containers. They are as follows:
+
+    - Number of CTM workers initialized (`worker_count_ready_ctm`)
+    - Number of diarization workers initialized (`worker_count_ready_diarization`)
+    - Number of post processing workers initialized (`worker_count_ready_postprocessing`)
+    - Total number of worker sets initialized. Every job requires 1 worker set to process (`worker_count_ready_set`)
+
+    #### Worker Transcription Failure Metrics
+
+    - Number of transcoding failures (`workers_job_failure_transcoding`)
+    - Number of transcribing failures (`workers_job_failure_transcribing`)
+    - Number of duration exceeded failures (`workers_job_failure_duration_exceeded`)
+    - Number of invalid audio channel failures (`workers_job_failure_invalid_audio_channel`)
+    - Number of internal processing failures (`workers_job_failure_internal_processing`)
+
+    #### Worker External Request Failure Metrics
+
+    - Number of billing request failures (`workers_billing_request_failure_{statusCodeInt}`)
+    - Number of billing response verification failures (`workers_billing_response_verification_failure`)
+
+    These metrics that contain `statusCodeInt` are labeled with `status_code_3xx`, `status_code_4xx`, and `status_code_5xx` failures based on their failure codes
+
+    # Troubleshooting
+
+    ## Logging
+
+    By default, the `Gateway` and `Workers` log to standard output (stdout) in [Serilog](https://serilog.net/) format. It is highly recommended to capture the standard output and save them for troubleshooting.
+
+    ```
+    # Note these logs samples are formatted JSON for readability. The application will output non-formatted JSON logs
+    {
+        "Timestamp": "2021-09-14T17:47:06.6900487+00:00",
+        "Level": "Information",
+        "MessageTemplate": "Starting {serviceName}",
+        "RenderedMessage": "Starting \"inboundQueueProcessor\"",
+        "Properties": {
+            "serviceName": "inboundQueueProcessor",
+            "SourceContext": "Rev.Common.AspNetCore.Infrastructure.IntervalTaskHostedService`1[[Rev.Infrastructure.InboundQueue.IInboundQueueProcessor, Rev.Infrastructure.InboundQueue, Version=3.1.0.0, Culture=neutral, PublicKeyToken=null]]",
+            "ThreadId": 4
+        }
+    }
+    {
+        "Timestamp": "2021-09-14T19:48:08.2238552+00:00",
+        "Level": "Information",
+        "MessageTemplate": "Starting ctm",
+        "RenderedMessage": "Starting ctm",
+        "Properties": {
+            "SourceContext": "Rev.Revspeech.Transcription.TranscriptionJob`2[[Rev.Revspeech.Transcription.Requests.QueueTranscriptionJobRequest, Revspeech, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null],[Rev.Revspeech.Transcription.Responses.QueueTranscriptionJobResponse, Revspeech, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]",
+            "estimatedCtmDurationSeconds": 135,
+            "originalFileName": "SCHADE & MICHALUK audio_only.m4a",
+            "jobId": "chunks.w.15873054.t.5493676.63c3471d-da64-41e3-881e-02bea6fe3e81.7",
+            "sequenceId": null,
+            "messageId": "ac4524ea-a1ef-41b2-a6c8-08b40dcb93ac",
+            "RevRequestId": "2692232a-4e13-41ed-b22d-15eb3a540d2c",
+            "RevRequestIdParent": "2692232a-4e13-41ed-b22d-15eb3a540d2c",
+            "RevRequestIdRoot": "2692232a-4e13-41ed-b22d-15eb3a540d2c",
+            "ThreadId": 15
+        }
+    }
+    ```
+
+    ### Rev Request Id
+
+    Some of the log messages contain a series of `RevRequestId`. The `RevRequestId` track the context across each job execution. One can filter by the `RevRequestId` to get all of the logs for a specific job.
+
+    ### Log Level
+
+    All log messages come with a log `Level` property. The ones exposed by the `Gateway` and `Workers` are `Info`, `Warning`, and `Error`. `Info` level logs are general level log messages that help trace application execution. `Warning` logs are logged when there is something that is potentially of concern and should be looked at. `Error` logs are unexpected and signal unexpected application state.
+
+    ## Gateway
+
+    ### Submission
+
+    When a `POST` request is made, a job is created and is scheduled to be executed in a workflow. You should see this log message appear, as well as a successful 200 response.
+
+    ```
+    # Sample Log Message
+    2021-09-14 12:28:33.011	Adding to seqqueue "revspeechapi"
+    ```
+
+    ```
+    # 200 Response
+    {
+      "id": "Umx5c6F7pH7r",
+      "status": "in_progress",
+      "created_on": "2018-05-05T23:23:22.29Z",
+      "type": "async"
+    }
+    ```
+
+    If the endpoint returns a 500, you should check the logs for any exceptions thrown.
+
+    ```
+    2021-09-13 07:33:13.700	Middleware uncaught exception "Exception of type 'ArgumentException'"
+    ```
+
+    It is possible in the rare case that the job could be created but not scheduled during this step, A 200 success response is the indicator whether the job was successfully submitted and is processing. After 24 hours, the job will expire from storage.
+
+    ### Workflow
+
+    The transcription job is scheduled to run through a series of steps before and after transcription. This is collectively know as the job `workflow`. The `workflow` has the following steps in this order:
+
+    1. Checking for transcription expiration
+    2. Preliminary Duration Detection
+    3. Transcription
+    4. Billing
+    5. Callback
+
+    Steps can be skipped depending on the state of the job. For example, if the job is already scheduled to be transcribed, a subsequent `workflow` will not submit the job for transcription. `Workflow` executions can fail at any step for any reason, however after a 10 minute delay, a scheduled `workflow` will be retried until 24 hours or the job is expired, whichever comes first.
+
+    ```
+    2021-09-13 08:51:38.281	callback execution failed
+    ```
+    s
+    ### Processing Results
+
+    When the `Workers` finish processing, the intermediate files are sent to the `Gateway` via the queue (`Revspeech__CompletionQueue`) to be combined and processed into a final transcript. During this step, if the `Gateway` fails to read from the queue or fails to process the intermediate files, the item in the queue will follow invisibility timeout and be avaialble to be attempted to be processed again in 5 minutes. Once transcript is processed, another workflow is scheduled and follows the workflow processing rules.
+
+    ```
+    2021-09-13 08:45:38.281 Read from the queue failed
+    ...
+    2021-09-13 08:47:38.281 Failed while assemblying the chunked job result
+    ...
+    2021-09-13 08:50:38.281 Exception while publishing the result
+    ```
+
+    ## Workers
+
+    ### Processing Failures (Expected)
+
+    The `Workers` are a stateless application. Most failures will result in a failure message being returned to the `Gateway` and the job subsequently failed. There are expected errors like invalid media or invalid audio duration. In the expected cases, the failure log message `"Transcription failed"` will be logged at the `Info` level.
+
+    ### Processing Failure (Unexpected)
+
+    In the case of unexpected failure when the `Workers` fail to return a response to the queue, the queue message being processed will have its invisibility timeout and be available to process again. A common message to see in this case is `"Message received with delay"`. A delay of of 300 seconds is expected as the invisibility timeout is set to 5 minutes. If the delay continues to grow larger and larger, this indicates that the message is continually failing to be processed unexpectedly.
+
+
+    ```
+    2021-09-14 01:10:50.443	Message received with delay 300.1 seconds
+    ```
+
+    ### Job Logs
+
+    All jobs processed by the `Workers` also write logs to a tmp file on disk in addition to stdout. The location of the job log for the file can be found via the log messages. This job log can be useful for further debugging if needed.
+
+    ```
+    2021-09-14 06:56:11.605	Created transcription log: "/tmp/tmpjOh7j6.tmp"
+    ```
+
+    # Cloud Differences
+
+    ## Gateway Sandbox
+    For integration testing purposes, we have the `Gateway` sandbox, which can be used to test the `Gateway` without the `Workers` running. The sandbox will be deployed as a seperate docker image with the tag:
+    - sandbox-gateway-2.1.4
+
+    This `Gateway` sandbox will provide the same functionality as the regular `Gateway`, but will quickly return a dummy transcript regardless of audio provided. Jobs created by the `Gateway` sandbox will go through the same workflow, except the actual transcription step. Furthermore, all billing requests will by default be sent to a seperate billing endpoint:
+    - `https://api.rev.ai/external/v2/sandbox/billing`
+
+    ## API
+
+    On Prem V2 tries to keep its API interface as similar to Rev AI's Cloud API as possible, however there are a few differences:
+
+    - No Access Token required per request. Instead Acess Token is provided on container startup.
+    - `media_url` must be provided for submission. `multiform/form-data` submission does not exist.
+    - Jobs persist for a maximum of 24 hours instead of 30 days
+    - Maximum audio length is 15 hours instead of 17
+    - No custom vocabulary (feature coming soon)
+    - Only allowed language is English
+    - `delete_after_seconds` is not supported in On Prem V2
+    - New job `failure` type: `billing_failure`
+    - There is no `GET /account` endpoint for On Prem V2
+
+    ## Workflow
+
+    The workflow of a On Prem V2 has a few key differences compared to Rev AI's Cloud solution:
+
+    - On Prem V2 performs preliminary duration detection using ffprobe on the provided `media_url`. If the duration metadata cannot
+    be accurately detected from the `media_url`, the job will not be chunked correctly which may increase turn around time
+    - Transcript is not available until billing completes
+    - Maximum time the job can spend in the workflow is 2 hours and 15 minutes before it fails with `internal_processing`
+servers:
+  - url: 'http://localhost:3000'
+    description: Rev AI API
+paths:
+  '/healthcheck':
+    get:
+      summary: Healthcheck
+      operationId: Healthcheck
+      description: Returns a 200 when the `Gateway` application is ready to receive requests
+      tags:
+        - API Reference - Healthcheck
+      responses:
+        '200':
+          description: Healthcheck Success
+  '/speechtotext/v1/jobs/{id}':
+    parameters:
+      - $ref: 'shared.yaml#/parameters/JobId'
+    get:
+      summary: Get Job By Id
+      operationId: GetJobById
+      description: Returns information about a transcription job
+      tags:
+        - API Reference - Jobs
+      responses:
+        '200':
+          description: Transcription Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncTranscriptionJob'
+              examples:
+                New Job:
+                  $ref: '#/components/examples/NewJob'
+                Transcribed Job:
+                  $ref: '#/components/examples/TranscribedJob'
+                Failed Job:
+                  $ref: '#/components/examples/FailedJob'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+    delete:
+      summary: Delete Job by Id
+      operationId: DeleteJobById
+      description: 'Deletes a transcription job. All data related to the job, such as input media and transcript, will be permanently deleted. A job can only be deleted once it''s completed (either with success or failure).'
+      tags:
+        - API Reference - Jobs
+      responses:
+        '204':
+          description: Job was successfully deleted
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '409':
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  value:
+                    allowed_values:
+                      - transcribed
+                      - failed
+                    current_value: in_progress
+                    type: 'https://rev.ai/api/v1/errors/invalid-job-state'
+                    title: Job is in invalid state
+                    detail: Job is in invalid state to be deleted
+                    status: 409
+  '/speechtotext/v1/jobs':
+    get:
+      summary: Get List of Jobs
+      operationId: GetListOfJobs
+      description: 'Gets a list of transcription jobs submitted within the 24 hours in reverse chronological order up to the provided `limit` number of jobs per call. **Note:** Jobs older than 24 hours will not be listed. Pagination is supported via passing the last job `id` from a previous call into `starting_after`.'
+      tags:
+        - API Reference - Jobs
+      parameters:
+        - $ref: 'shared.yaml#/parameters/JobListLimit'
+        - $ref: 'shared.yaml#/parameters/JobListStartingAfter'
+      responses:
+        '200':
+          description: List of Rev AI Transcription Jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AsyncTranscriptionJob'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: 'shared.yaml#/schemas/BadRequestProblemDetails'
+              examples:
+                Limit Above Max Value:
+                  $ref: 'shared.yaml#/responses/BadLimitResponse'
+                Invalid Job Id:
+                  $ref: 'shared.yaml#/responses/InvalidStartingAfterResponse'
+    post:
+      summary: Submit Transcription Job
+      operationId: SubmitTranscriptionJob
+      description: 'Starts an asynchronous job to transcribe speech-to-text for a media file. Media files can be specified by including a public url to the media in the transcription job `options`.'
+      tags:
+        - API Reference - Jobs
+      requestBody:
+        description: Transcription Job Options
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitJobMediaUrlOptions'
+      responses:
+        '200':
+          description: Transcription Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncTranscriptionJob'
+              example:
+                $ref: '#/components/examples/NewJob'
+        '400':
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: shared.yaml#/schemas/BadRequestProblemDetails
+              example:
+                parameter:
+                  media_url:
+                    - The media_url field is required
+                type: 'https://www.rev.ai/api/v1/errors/invalid-parameters'
+                title: Your request parameters didn't validate
+                status: 400
+  '/speechtotext/v1/jobs/{id}/transcript':
+    parameters:
+      - $ref: 'shared.yaml#/parameters/JobId'
+    get:
+      summary: Get Transcript By Id
+      operationId: GetTranscriptById
+      description: |
+        Returns the transcript for a completed transcription job. Transcript can be returned as either JSON or plaintext format. Transcript output format can be specified in the `Accept` header. Returns JSON by default.
+      tags:
+        - API Reference - Transcript
+      parameters:
+        - $ref: '#/components/parameters/acceptTranscript'
+      responses:
+        '200':
+          description: |
+            Rev AI API Transcript
+            ***
+            Note: Transcript output format is required in the Accept header. Output can either be in Rev's JSON format or plaintext.
+          content:
+            application/vnd.rev.transcript.v1.0+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/Transcript'
+              examples:
+                skip_diarization false && skip_punctuation false:
+                  value:
+                    monologues:
+                      - speaker: 1
+                        elements:
+                          - type: text
+                            value: Hello
+                            ts: 0.5
+                            end_ts: 1.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: World
+                            ts: 1.75
+                            end_ts: 2.85
+                            confidence: 0.8
+                          - type: punct
+                            value: .
+                      - speaker: 2
+                        elements:
+                          - type: text
+                            value: monologues
+                            ts: 3
+                            end_ts: 3.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: are
+                            ts: 3.6
+                            end_ts: 3.9
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: a
+                            ts: 4
+                            end_ts: 4.3
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: block
+                            ts: 4.5
+                            end_ts: 5.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: of
+                            ts: 5.75
+                            end_ts: 6.14
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: unknown
+                            value: <inaudible>
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: text
+                            ts: 6.5
+                            end_ts: 7.78
+                            confidence: 1
+                          - type: punct
+                            value: .
+                skip_diarization true && skip_punctuation false:
+                  value:
+                    monologues:
+                      - speaker: 1
+                        elements:
+                          - type: text
+                            value: Hello
+                            ts: 0.5
+                            end_ts: 1.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: World
+                            ts: 1.75
+                            end_ts: 2.85
+                            confidence: 0.8
+                          - type: punct
+                            value: .
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: monologues
+                            ts: 3
+                            end_ts: 3.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: are
+                            ts: 3.6
+                            end_ts: 3.9
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: a
+                            ts: 4
+                            end_ts: 4.3
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: block
+                            ts: 4.5
+                            end_ts: 5.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: of
+                            ts: 5.75
+                            end_ts: 6.14
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: unknown
+                            value: <inaudible>
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: text
+                            ts: 6.5
+                            end_ts: 7.78
+                            confidence: 1
+                          - type: punct
+                            value: .
+                skip_diarization false && skip_punctuation true:
+                  value:
+                    monologues:
+                      - speaker: 1
+                        elements:
+                          - type: text
+                            value: Hello
+                            ts: 0.5
+                            end_ts: 1.5
+                            confidence: 1
+                          - type: text
+                            value: World
+                            ts: 1.75
+                            end_ts: 2.85
+                            confidence: 0.8
+                      - speaker: 2
+                        elements:
+                          - type: text
+                            value: monologues
+                            ts: 3
+                            end_ts: 3.5
+                            confidence: 1
+                          - type: text
+                            value: are
+                            ts: 3.6
+                            end_ts: 3.9
+                            confidence: 1
+                          - type: text
+                            value: a
+                            ts: 4
+                            end_ts: 4.3
+                            confidence: 1
+                          - type: text
+                            value: block
+                            ts: 4.5
+                            end_ts: 5.5
+                            confidence: 1
+                          - type: text
+                            value: of
+                            ts: 5.75
+                            end_ts: 6.14
+                            confidence: 1
+                          - type: unknown
+                            value: <inaudible>
+                          - type: text
+                            value: text
+                            ts: 6.5
+                            end_ts: 7.78
+                            confidence: 1
+                skip_diarization true && skip_punctuation true:
+                  value:
+                    monologues:
+                      - speaker: 1
+                        elements:
+                          - type: text
+                            value: Hello
+                            ts: 0.5
+                            end_ts: 1.5
+                            confidence: 1
+                          - type: text
+                            value: World
+                            ts: 1.75
+                            end_ts: 2.85
+                            confidence: 0.8
+                          - type: text
+                            value: monologues
+                            ts: 3
+                            end_ts: 3.5
+                            confidence: 1
+                          - type: text
+                            value: are
+                            ts: 3.6
+                            end_ts: 3.9
+                            confidence: 1
+                          - type: text
+                            value: a
+                            ts: 4
+                            end_ts: 4.3
+                            confidence: 1
+                          - type: text
+                            value: block
+                            ts: 4.5
+                            end_ts: 5.5
+                            confidence: 1
+                          - type: text
+                            value: of
+                            ts: 5.75
+                            end_ts: 6.14
+                            confidence: 1
+                          - type: unknown
+                            value: <inaudible>
+                          - type: text
+                            value: text
+                            ts: 6.5
+                            end_ts: 7.78
+                            confidence: 1
+            text/plain:
+              schema:
+                type: string
+              examples:
+                skip_diarization false && skip_punctuation false:
+                  value: |
+                    Speaker 0:    00:00:00    Hello there, this is a sample transcript in plain text.
+                    Speaker 1:    00:00:43    Words are returned with spaces between them.
+                skip_diarization true && skip_punctuation false:
+                  value: |
+                    Speaker 0:    00:00:01    Hello there, this is a sample transcript in plain text. Words are returned with spaces between them.
+                skip_diarization false && skip_punctuation true:
+                  value: |
+                    Speaker 0:    00:00:00    Hello there this is a sample transcript in plain text
+                    Speaker 1:    00:00:43    Words are returned with spaces between them
+                skip_diarization true && skip_punctuation true:
+                  value: |
+                    Speaker 0:    00:00:01    Hello there this is a sample transcript in plain text Words are returned with spaces between them
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '406':
+          $ref: '#/components/responses/InvalidTranscriptFormat'
+        '409':
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  value:
+                    allowed_values:
+                      - transcribed
+                    current_value: in_progress
+                    type: 'https://rev.ai/api/v1/errors/invalid-job-state'
+                    title: Job is in invalid state
+                    detail: Job is in progress or failed
+                    status: 409
+  '/speechtotext/v1/jobs/{id}/captions':
+    parameters:
+      - $ref: 'shared.yaml#/parameters/JobId'
+    get:
+      summary: Get Captions
+      operationId: GetCaptions
+      description: |
+        Returns the caption output for a transcription job. We currently support SubRip (SRT) and Web Video Text Tracks (VTT) output.
+        Caption output format can be specified in the `Accept` header. Returns SRT by default.
+        ***
+        Note: For streaming jobs, transient failure of our storage during a live session may prevent the final hypothesis elements from saving properly, resulting in an incomplete caption file. This is rare, but not impossible.
+      tags:
+        - API Reference - Captions
+      parameters:
+        - $ref: '#/components/parameters/acceptCaption'
+        - in: query
+          name: speaker_channel
+          schema:
+            type: integer
+          required: false
+          description: Identifies which channel of the job output to caption. Default is `null` which works only for jobs with no `speaker_channels_count` provided during job submission.
+      responses:
+        '200':
+          description: |
+            Rev AI API Captions
+            ***
+            Note: Caption output format is required in the Accept header. The supported headers are `application/x-subrip` and `text/vtt`.
+            ([SRT](https://en.wikipedia.org/wiki/SubRip))
+          content:
+            application/x-subrip:
+              schema:
+                type: string
+              examples:
+                SubRip Text (SRT):
+                  value: |
+                    1
+                    00:00:01,210 --> 00:00:04,840
+                    Hello there, this is a example captions output
+
+                    2
+                    00:00:07,350 --> 00:00:10,970
+                    Each caption group is in the SubRip Text
+                    file format
+            text/vtt:
+              schema:
+                type: string
+              examples:
+                WebVTT (VTT):
+                  value: |
+                    WebVTT
+
+                    1
+                    00:00:01,210 ==> 00:00:04,840
+                    Hello there,
+                    this is an example captions output
+
+                    2
+                    00:00:07,350 --> 00:00:10,970
+                    Each caption group is in the vtt
+                    file format
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '405':
+          $ref: '#/components/responses/InvalidJobPropertyCaptions'
+        '406':
+          $ref: '#/components/responses/InvalidCaptionFormat'
+        '409':
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  value:
+                    allowed_values:
+                      - transcribed
+                    current_value: in_progress
+                    type: 'https://rev.ai/api/v1/errors/invalid-job-state'
+                    title: Job is in invalid state
+                    detail: Job is in progress or failed
+                    status: 409
+components:
+  schemas:
+    AudioAnalysisStatusField:
+      type: string
+      enum:
+        - in_progress
+        - transcribed
+        - failed
+      description: Current status of the job
+      example: transcribed
+    FileNameField:
+      type: string
+      description: Name of the file provided. Present when the file name is available
+      nullable: true
+      example: sample_audio.mp3
+    FileDurationSecondsField:
+      type: number
+      format: double
+      description: Duration of the file in seconds. Null if the file could not be retrieved or there was not a valid media file
+      nullable: true
+      example: 324.36
+    AudioAnalysisFailureField:
+      type: string
+      description: Simple reason of why the transcription job failed. Check `failure_detail` for specific details and solutions
+      enum:
+        - internal_processing
+        - download_failure
+        - duration_exceeded
+        - duration_too_short
+        - invalid_media
+        - empty_media
+        - transcription
+        - insufficient_balance
+        - billing
+      nullable: true
+      example: download_failure
+    MediaUrlField:
+      description: Media url provided by the job submission.
+      type: string
+      nullable: true
+      maxLength: 2048
+      example: 'https://www.rev.ai/FTC_Sample_1.mp3'
+    OptionalFlagField:
+      type: boolean
+      default: false
+      nullable: true
+      example: true
+    SpeakerChannelsCountField:
+      description: User-supplied number of speaker channels in the audio.
+      type: integer
+      minimum: 1
+      maximum: 8
+      nullable: true
+      example: 2
+    CustomVocabulariesField:
+      type: array
+      minItems: 1
+      maxItems: 50
+      items:
+        type: object
+        description: Contains a collection of phrases. Custom vocabulary informs and biases the speech recognition to find those phrases (at the cost of slightly slower transcription).
+        required:
+          - phrases
+        properties:
+          phrases:
+            type: array
+            minItems: 1
+            maxItems: 6000
+            description: |
+              Array of phrases not found in normal dictionary. Add technical jargon, proper nouns and uncommon phrases as strings in this array to add them to the lexicon for this job.
+
+              A phrase must contain only alpha and punctuation characters from the Basic Latin set. A phrase can contain up to 12 words. Each word can contain up to 34 characters.
+
+              **Note**: Only 6000 phrases can be used per transcription job. For more details, check [Custom Vocabularies](https://www.rev.ai/docs/overview#section/Features/Custom-Vocabularies).
+            items:
+              type: string
+              title: phrase
+            example: [ 'Paul McCartney', 'Amelia Earhart', 'Weiss-Bergman', 'BLM' ]
+    AsyncTranscriptionJob:
+      type: object
+      description: |
+        Rev AI Transcription Job
+        ***
+        Note: properties are not displayed in the returned object if they are null
+      properties:
+        id:
+          type: string
+          description: Id of the job
+          example: Umx5c6F7pH7r
+        status:
+          $ref: '#/components/schemas/AudioAnalysisStatusField'
+        created_on:
+          $ref: 'shared.yaml#/schemas/CreatedOnField'
+        completed_on:
+          $ref: 'shared.yaml#/schemas/CompletedOnField'
+        metadata:
+          description: Optional metadata that was provided during job submission
+          allOf:
+            - $ref: 'shared.yaml#/schemas/MetadataField'
+        name:
+          $ref: '#/components/schemas/FileNameField'
+        duration_seconds:
+          $ref: '#/components/schemas/FileDurationSecondsField'
+        failure:
+          $ref: '#/components/schemas/AudioAnalysisFailureField'
+        failure_detail:
+          example: Failed to download media file. Please check your url and file type
+          allOf:
+            - $ref: 'shared.yaml#/schemas/FailureDetailField'
+        type:
+          type: string
+          description: Type of speech recognition performed.
+          enum:
+            - async
+          nullable: false
+          example: async
+        callback_url:
+          $ref: 'shared.yaml#/schemas/CallbackUrlField'
+        media_url:
+          $ref: '#/components/schemas/MediaUrlField'
+        skip_diarization:
+          description: User-supplied preference on whether to skip diarization.
+          allOf:
+            - $ref: '#/components/schemas/OptionalFlagField'
+        skip_punctuation:
+          description: User-supplied preference on whether to skip punctuation.
+          allOf:
+            - $ref: '#/components/schemas/OptionalFlagField'
+        remove_disfluencies:
+          description: User-supplied preference on whether to remove disfluencies.
+          allOf:
+            - $ref: '#/components/schemas/OptionalFlagField'
+        filter_profanity:
+          description: User-supplied preference on whether to remove explicit words.
+          allOf:
+            - $ref: '#/components/schemas/OptionalFlagField'
+        speaker_channels_count:
+          $ref: '#/components/schemas/SpeakerChannelsCountField'
+      example:
+        id: Umx5c6F7pH7r
+        status: in_progress
+        created_on: '2018-05-05T23:23:22.29Z'
+        type: async
+    SubmitJobMediaUrlOptions:
+      allOf:
+        - type: object
+          required:
+            - media_url
+          properties:
+            media_url:
+              type: string
+              description: 'Direct download media url. Ignored if submitting job from file. **Note:** Media files longer than 17 hours are not supported for English transcription, and media files longer than 12 hours are not supported for non-English transcription. For non-English jobs, expected turnaround time can be up to 6 hours.'
+              maxLength: 2048
+              example: 'https://www.rev.ai/FTC_Sample_1.mp3'
+        - $ref: '#/components/schemas/SubmitJobOptions'
+    AsyncLanguageField:
+      description: User-supplied language to transcribe the audio into.
+      type: string
+      default: en
+      nullable: true
+      example: en
+      enum:
+        - en
+        - es
+        - fr
+    SubmitJobOptions:
+      allOf:
+        - type: object
+          description: Rev AI Job Options Object Model
+          properties:
+            metadata:
+              description: |
+                Optional metadata that was provided during submission. This field attached to the external billing request.
+                **Do not put sensitive information in this field**
+              allOf:
+                - $ref: 'shared.yaml#/schemas/MetadataField'
+            callback_url:
+              description: Optional callback url to invoke when processing is complete
+              allOf:
+                - $ref: 'shared.yaml#/schemas/CallbackUrlField'
+            skip_diarization:
+              description: Specify if speaker diarization will be skipped by the speech engine
+              allOf:
+                - $ref: '#/components/schemas/OptionalFlagField'
+            skip_punctuation:
+              description: |
+                Specify if "punct" type elements will be skipped by the speech engine. For JSON outputs, this includes removing spaces. For text outputs,
+                words will still be delimited by a space
+              allOf:
+                - $ref: '#/components/schemas/OptionalFlagField'
+            remove_disfluencies:
+              description: |
+                Currently we only define disfluencies as 'ums' and 'uhs'. When set to true, disfluencies will be not appear in the transcript.
+              allOf:
+                - $ref: '#/components/schemas/OptionalFlagField'
+            filter_profanity:
+              description: |
+                Enabling this option will filter for approx. 600 profanities, which cover most use cases. If a transcribed word matches a word on this list, then all the characters of that word will be replaced by asterisks except for the first and last character.
+              allOf:
+                - $ref: '#/components/schemas/OptionalFlagField'
+            speaker_channels_count:
+              description: |
+                Use to specify the total number of unique speaker channels in the audio.
+
+                Given the number of audio channels provided, each channel will be transcribed
+                separately and the channel id assigned to the `speaker` label. The final output will be a combination of all individual channel outputs. Overlapping `monologues` will have ordering broken
+                by the order in which the first spoken `element` of each `monologue` occurs. If `speaker_channels_count` is greater than the actual channels in the audio,
+                the job will fail with `invalid_media`.
+
+                **Note:**
+                  - The amount charged will be the duration of the file multiplied by the number of channels specified.
+                  - When using `speaker_channels_count` each channel will be diarized as one speaker, and the value of `skip_diarization` will be ignored if provided
+              allOf:
+                - $ref: '#/components/schemas/SpeakerChannelsCountField'
+            custom_vocabularies:
+              description: |
+                Specify a collection of custom vocabulary to be used for this job. Custom vocabulary informs and biases the speech recognition to find those phrases (at the cost of slightly slower transcription). **Currently only available for English transcription jobs.**
+              allOf:
+                - $ref: '#/components/schemas/CustomVocabulariesField'
+            language:
+              description: |
+                `language` is provided as a [ISO 639-1 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), with the exception of Mandarin (cmn) which is supplied as an [ISO 639-3 language code](https://en.wikipedia.org/wiki/ISO_639-3).
+
+                Only 1 language can be selected per audio, i.e. no multiple languages in one transcription job.
+
+                You can provide a `language` parameter for transcribing audio in one of the following languages:
+
+                | Language   | ISO 639 Language Code                         |
+                |------------|-----------------------------------------------|
+                | English    | en |
+                | French     | fr |
+                | Spanish    | es |
+              allOf:
+                - $ref: '#/components/schemas/AsyncLanguageField'
+  parameters:
+    acceptCaption:
+      name: Accept
+      in: header
+      description: MIME type specifying the caption output format
+      required: false
+      schema:
+        type: string
+        enum:
+          - application/x-subrip
+          - text/vtt
+    acceptTranscript:
+      name: Accept
+      in: header
+      description: MIME type specifying the transcription output format
+      required: false
+      schema:
+        type: string
+        enum:
+          - application/vnd.rev.transcript.v1.0+json
+          - text/plain
+  responses:
+    InvalidJobPropertyCaptions:
+      description: Invalid Job Property
+      content:
+        application/problem+json:
+          schema:
+            allOf:
+              - $ref: shared.yaml#/schemas/BaseProblemDetails
+              - type: object
+                properties:
+                  detail:
+                    type: string
+                    description: Human-readable explanation specific to this occurrence of the problem
+          example:
+            type: 'https://rev.ai/api/v1/errors/invalid-job-properties'
+            title: Job contains unsupported properties
+            detail: Job with speaker channels provided are not supported for retrieving captions
+            status: 405
+    InvalidTranscriptFormat:
+      description: Invalid Transcript Format
+      content:
+        application/problem+json:
+          schema:
+            allOf:
+              - $ref: shared.yaml#/schemas/BaseProblemDetails
+              - type: object
+                properties:
+                  current_value:
+                    type: string
+                    description: Value passed in given request
+                  allowed_values:
+                    type: array
+                    description: Allowed values for this request
+                    items:
+                      type: string
+                  detail:
+                    type: string
+                    description: Human-readable explanation specific to this occurrence of the problem
+          example:
+            allowed_values:
+              - text/plain
+              - application/vnd.rev.transcript.v1.0+json
+            current_value: '*/*'
+            type: 'https://www.rev.ai/api/v1/errors/unsupported-output-format'
+            title: Output format is not supported
+            detail: Unsupported value */*
+            status: 406
+    InvalidCaptionFormat:
+      description: Invalid Caption Format
+      content:
+        application/problem+json:
+          schema:
+            allOf:
+              - $ref: shared.yaml#/schemas/BaseProblemDetails
+              - type: object
+                properties:
+                  current_value:
+                    type: string
+                    description: Value passed in given request
+                  allowed_values:
+                    type: array
+                    description: Allowed values for this request
+                    items:
+                      type: string
+                  detail:
+                    type: string
+                    description: Human-readable explanation specific to this occurrence of the problem
+          example:
+            allowed_values:
+              - application/x-subrip
+              - text/vtt
+            current_value: '*/*'
+            type: 'https://www.rev.ai/api/v1/errors/unsupported-output-format'
+            title: Output format is not supported
+            detail: Unsupported value */*
+            status: 406
+  examples:
+    NewJob:
+      value:
+        id: Umx5c6F7pH7r
+        status: in_progress
+        language: en
+        created_on: '2018-05-05T23:23:22.29Z'
+    TranscribedJob:
+      value:
+        id: Umx5c6F7pH7r
+        status: transcribed
+        language: en
+        created_on: '2018-05-05T23:23:22.29Z'
+        completed_on: '2018-05-05T23:45:13.41Z'
+        callback_url: 'https://www.example.com/callback'
+        duration_seconds: 356.24
+        media_url: 'https://www.rev.ai/FTC_Sample_1.mp3'
+    FailedJob:
+      value:
+        id: Umx5c6F7pH7r
+        status: failed
+        language: en
+        created_on: '2018-05-05T23:23:22.29Z'
+        completed_on: '2018-05-05T23:23:24.11Z'
+        failure: download_failure
+        failure_detail: Failed to download media file. Please check your url and file type

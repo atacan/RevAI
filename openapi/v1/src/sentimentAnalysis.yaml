@@ -1,0 +1,372 @@
+tags:
+  - name: Jobs
+    description: |
+      This feature is in open beta through Rev AI Labs.
+      This API provides information about sentiments expressed in conversation. To see our sentiment analysis API in practice you'll need
+      either a [transcript](https://www.rev.ai/docs#tag/Transcript) generated from our [speech-to-text API](https://www.rev.ai/docs) or a
+      conversation in plain text.
+      ## Key Features
+      - Scores the sentiment expressed in phrases in a transcript on a -1.0 to 1.0 scale.
+paths:
+  /jobs:
+    post:
+      summary: Submit Sentiment Analysis Job
+      operationId: SubmitSentimentAnalysisJob
+      description: |
+        Starts an asynchronous job to analyze sentiments in a transcript.
+        The transcript can be supplied through `text` as plain text or `json` as a [rev.com transcript format](https://www.rev.ai/docs#tag/Transcript)
+      tags:
+        - Jobs
+      requestBody:
+        description: Sentiment Analysis Job Options
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/schemas/SubmitSentimentAnalysisJobOptions'
+            examples:
+              JSON Submission:
+                value:
+                  language: en
+                  metadata: 'sample user provided metadata'
+                  callback_url: 'https://www.example.com/callback'
+                  delete_after_seconds: 1000000
+                  json:
+                    monologues:
+                      - speaker: 1
+                        elements:
+                          - type: 'text'
+                            value: 'hello'
+                            ts: 0.75
+                            end_ts: 1.25
+                            confidence: 0.85
+              Plain Text Submission:
+                value:
+                  language: en
+                  metadata: 'sample user provided metadata'
+                  callback_url: 'https://www.example.com/callback'
+                  delete_after_seconds: 1000000
+                  text: 'Plain text I would like sentiment analysis performed on'
+
+      responses:
+        '200':
+          description: Sentiment Analysis Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/schemas/SentimentAnalysisJob'
+              examples:
+                New Job:
+                  $ref: '#/examples/NewSentimentAnalysisJob'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: 'shared.yaml#/schemas/BadRequestProblemDetails'
+              examples:
+                No Input Text:
+                  $ref: 'shared.yaml#/responses/BadRequestNoInputText'
+                Both Json and Plaintext Provided:
+                  $ref: 'shared.yaml#/responses/BadRequestBothJsonText'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '413':
+          $ref: 'shared.yaml#/responses/PayloadTooLarge'
+    get:
+      summary: Get List of Sentiment Analysis Jobs
+      operationId: GetListOfSentimentAnalysisJobs
+      description: |
+        Gets a list of sentiment analysis jobs submitted within the last 30 days in reverse chronological order up to the provided `limit` number of jobs per call. **Note:** Jobs older than 30 days will not be listed. Pagination is supported via passing the last job `id` from a previous call into `starting_after`.
+      tags:
+        - Jobs
+      parameters:
+        - $ref : 'shared.yaml#/parameters/JobListLimit'
+        - $ref : 'shared.yaml#/parameters/JobListStartingAfter'
+      responses:
+        '200':
+          description: List of Rev AI Sentiment Analysis Jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/schemas/SentimentAnalysisJob'
+              examples:
+                Jobs Found :
+                  value:
+                    - id: Umx5c6F7pH7r
+                      status: in_progress
+                      language: en
+                      created_on: '2018-05-05T23:23:22.29Z'
+                      type: sentiment_analysis
+                    - id: 6BxQYGa638Yt
+                      status: completed
+                      language: en
+                      created_on: '2018-05-05T23:23:22.29Z'
+                      completed_on: '2018-05-05T23:45:13.41Z'
+                      callback_url: 'https://www.example.com/callback'
+                      word_count: 4231
+                      type: sentiment_analysis
+                No Jobs Found :
+                  value: []
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: 'shared.yaml#/schemas/BadRequestProblemDetails'
+              examples:
+                Limit Above Max Value:
+                  $ref: 'shared.yaml#/responses/BadLimitResponse'
+                Invalid Job Id:
+                  $ref: 'shared.yaml#/responses/InvalidStartingAfterResponse'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+  '/jobs/{id}':
+    parameters:
+      - $ref: 'shared.yaml#/parameters/JobId'
+    get:
+      summary: Get Sentiment Analysis Job By Id
+      operationId: GetSentimentAnalysisJobById
+      description: Returns information about a sentiment analysis job
+      tags:
+        - Jobs
+      responses:
+        '200':
+          description: Sentiment Analysis Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/schemas/SentimentAnalysisJob'
+              examples:
+                New Job:
+                  $ref: '#/examples/NewSentimentAnalysisJob'
+                Completed Job:
+                  $ref: '#/examples/CompletedSentimentAnalysisJob'
+                Failed Job:
+                  $ref: '#/examples/FailedSentimentAnalysisJob'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+    delete:
+      summary: Delete Sentiment Analysis Job by Id
+      operationId: DeleteSentimentAnalysisJobById
+      description: 'Deletes a sentiment analysis job. All data related to the job will be permanently deleted. A job can only be deleted once it''s completed (either with success or failure).'
+      tags:
+        - Jobs
+      responses:
+        '204':
+          $ref: 'shared.yaml#/responses/DeleteJobSuccessful'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  $ref: 'shared.yaml#/responses/ConflictTextAnalysisJob_InvalidDeleteState'
+  '/jobs/{id}/result':
+    get:
+      parameters:
+        - $ref: 'shared.yaml#/parameters/JobId'
+        - $ref: '#/parameters/filter_for'
+      summary: Get Sentiment Analysis Result By Id
+      operationId: GetSentimentAnalysisResultById
+      description: |
+        Returns the results for a completed sentiment analysis job.
+      tags:
+        - Jobs
+      responses:
+        '200':
+          $ref: '#/responses/SampleSentimentAnalysisResult'
+        '401':
+          $ref: 'shared.yaml#/responses/Unauthorized'
+        '404':
+          $ref: 'shared.yaml#/responses/JobNotFound'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: 'shared.yaml#/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  $ref: 'shared.yaml#/responses/ConflictTextAnalysisJob_InvalidStateInProgress'
+                Failed Job:
+                  $ref: 'shared.yaml#/responses/ConflictTextAnalysisJob_InvalidStateFailed'
+schemas:
+  SentimentAnalysisJob:
+    allOf:
+      - $ref: 'shared.yaml#/schemas/BaseTextAnalysisJob'
+      - type: object
+        properties:
+          type:
+            type: string
+            description: The type of action performed, in this case `sentiment_analysis`
+            enum:
+              - sentiment_analysis
+            nullable: false
+            example: sentiment_analysis
+    example:
+      $ref: '#/examples/NewSentimentAnalysisJob'
+  SubmitSentimentAnalysisJobOptions:
+    allOf:
+      - $ref: 'shared.yaml#/schemas/BaseTextAnalysisSubmitJobOptions'
+  BaseMessage:
+    properties:
+      content:
+        type: string
+        description: |
+          Content of the section of the transcript which has been assigned this sentiment
+      score:
+        type: number
+        minimum: -1.0
+        maximum: 1.0
+        description: |
+          Sentimental “score” of the content.
+          Numbers less than 0 indicate a negative (sad, angry) sentiment.
+          Numbers above 0 indicate positive (joyful, happy) sentiment
+      sentiment:
+        type: string
+        enum:
+          - positive
+          - negative
+          - neutral
+        description: |
+          Overall detected sentiment of the content, based off of `score`
+  TranscriptSubmissionMessages:
+    type: array
+    items:
+      allOf:
+        - $ref: '#/schemas/BaseMessage'
+        - type: object
+          properties:
+            ts:
+              $ref: 'shared.yaml#/schemas/TsField'
+            end_ts:
+              $ref: 'shared.yaml#/schemas/EndTsField'
+  TextSubmissionMessages:
+    type: array
+    items:
+      allOf:
+        - $ref: '#/schemas/BaseMessage'
+        - type: object
+          properties:
+            offset:
+              type: number
+              description: |
+                Number of characters (excluding newline characters such as `\n` or `\r`) in the input leading up to the
+                content of this message. Only included if input to sentiment analysis was plain text.
+            length:
+              type: number
+              description: |
+                Number of characters (excluding newline characters such as `\n` or `\r`) in the content. Only included
+                if input to sentiment analysis was plain text.
+  SentimentAnalysisResult:
+    description: Rev AI Sentiment Analysis Result Model
+    type: object
+    properties:
+      messages:
+        description: |
+          List of messages containing phrases from the input with their detected sentiment.
+          Positional properties will be different depending on the type of submission.
+        oneOf:
+          - $ref: '#/schemas/TranscriptSubmissionMessages'
+          - $ref: '#/schemas/TextSubmissionMessages'
+parameters:
+  filter_for:
+    name: filter_for
+    in: query
+    description: |
+      Filter for sentiments. If specified only messages with the specified sentiment will be returned
+    schema:
+      type: string
+      enum:
+        - positive
+        - negative
+        - neutral
+      nullable: true
+responses:
+  SampleSentimentAnalysisResult:
+    description: |
+      Rev AI API Sentiment Analysis Result
+    content:
+      application/vnd.rev.sentiment.v1.0+json:
+        schema:
+          $ref: '#/schemas/SentimentAnalysisResult'
+        examples:
+          Transcript Job Submission:
+            value:
+              messages:
+                - content: 'This is wonderful, I could not be more pleased.'
+                  score: 0.9
+                  sentiment: 'positive'
+                  ts: 1.0
+                  end_ts: 4.6
+                - content: 'I''m very disappointed.'
+                  score: -0.81
+                  sentiment: 'negative'
+                  ts: 10.0
+                  end_ts: 12.2
+                - content: 'That car is red.'
+                  score: 0.1
+                  sentiment: 'neutral'
+                  ts: 15.0
+                  end_ts: 16.6
+          Plain Text Job Submission:
+            value:
+              messages:
+                - content: 'This is wonderful, I could not be more pleased.'
+                  score: 0.9
+                  sentiment: 'positive'
+                  offset: 0
+                  length: 47
+                - content: 'I''m very disappointed.'
+                  score: -0.81
+                  sentiment: 'negative'
+                  offset: 48
+                  length: 22
+                - content: 'That car is red.'
+                  score: 0.1
+                  sentiment: 'neutral'
+                  offset: 71
+                  length: 16
+examples:
+  NewSentimentAnalysisJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: in_progress
+      language: en
+      created_on: '2018-05-05T23:23:22.29Z'
+      callback_url: 'https://www.example.com/callback'
+      type: sentiment_analysis
+  CompletedSentimentAnalysisJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: completed
+      language: en
+      created_on: '2018-05-05T23:23:22.29Z'
+      completed_on: '2018-05-05T23:45:13.41Z'
+      callback_url: 'https://www.example.com/callback'
+      word_count: 4231
+      type: sentiment_analysis
+  FailedSentimentAnalysisJob:
+    value:
+      id: Umx5c6F7pH7r
+      status: failed
+      language: en
+      created_on: '2018-05-05T23:23:22.29Z'
+      completed_on: '2018-05-05T23:23:24.11Z'
+      callback_url: 'https://www.example.com/callback'
+      failure: internal_processing
+      failure_detail: Internal processing failed
+      type: sentiment_analysis
+
+
