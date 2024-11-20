@@ -30,8 +30,11 @@ format: check_uncommitted
 clean_spm_cache:
 	swift package purge-cache
 
+bundle-openapi:
+	redocly bundle openapi/v1/documentation.yaml -o Sources/RevAI_AHC/openapi.yaml
+
 generate-openapi:
 	swift run swift-openapi-generator generate \
 		--output-directory Sources/RevAI_AHC/GeneratedSources \
 		--config Sources/RevAI_AHC/openapi-generator-config.yaml \
-		openapi/v1/src/asyncTranscription.yaml
+		Sources/RevAI_AHC/openapi.yaml

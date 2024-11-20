@@ -1,0 +1,1789 @@
+openapi: 3.0.1
+info:
+  title: Asynchronous Speech-To-Text API Documentation
+  contact:
+    email: support@rev.com
+    name: Rev
+    url: https://www.rev.ai/
+  version: v1
+  description: |
+    Asynchronous Speech-To-Text API Documentation
+  termsOfService: https://www.rev.ai/about/terms
+servers:
+  - url: https://api.rev.ai/speechtotext/v1
+    description: Rev AI API
+security:
+  - AccessToken: []
+paths:
+  /jobs/{id}:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
+    get:
+      summary: Get Job By Id
+      operationId: GetJobById
+      description: Returns information about a transcription job
+      tags:
+        - Jobs
+      responses:
+        '200':
+          description: Transcription Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncTranscriptionJob'
+              examples:
+                New Job:
+                  $ref: '#/components/examples/NewJob'
+                Transcribed Job:
+                  $ref: '#/components/examples/TranscribedJob'
+                Failed Job:
+                  $ref: '#/components/examples/FailedJob'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/JobNotFound'
+      x-code-samples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -X GET "https://api.rev.ai/speechtotext/v1/jobs/{id}" -H "Authorization: Bearer $REV_ACCESS_TOKEN"
+        - lang: Python
+          source: |
+            from rev_ai import apiclient
+            access_token = 'your_access_token'
+            job_id = 'your_job_id'
+
+            # Create client with your access token
+            client = apiclient.RevAiAPIClient(access_token)
+
+            # Get job details
+            job_details = client.get_job_details(job_id)
+        - lang: JavaScript
+          label: Node
+          source: |
+            import { RevAiApiClient } from 'revai-node-sdk';
+            var accessToken = "yourAccessToken";
+            var jobId = "yourJobId";
+
+            // Initialize your client with your access token
+            var client = new RevAiApiClient(accessToken);
+
+            // Get job details
+            var jobDetails = await client.getJobDetails(jobId);
+        - lang: Java
+          source: |
+            String accessToken = "Your Access Token";
+            String jobId = "yourJobId";
+
+            // Initialize your client with your access token
+            ApiClient apiClient = new ApiClient(accessToken);
+
+            // Get job details
+            RevAiJob jobDetails = apiClient.getJobDetails(jobId);
+    delete:
+      summary: Delete Job by Id
+      operationId: DeleteJobById
+      description: Deletes a transcription job. All data related to the job, such as input media and transcript, will be permanently deleted. A job can only be deleted once it's completed (either with success or failure).
+      tags:
+        - Jobs
+      responses:
+        '204':
+          $ref: '#/components/responses/DeleteJobSuccessful'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/JobNotFound'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  value:
+                    allowed_values:
+                      - transcribed
+                      - failed
+                    current_value: in_progress
+                    type: https://rev.ai/api/v1/errors/invalid-job-state
+                    title: Job is in invalid state
+                    detail: Job is in invalid state to be deleted
+                    status: 409
+      x-code-samples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -X DELETE "https://api.rev.ai/speechtotext/v1/jobs/{id}" -H "Authorization: Bearer $REV_ACCESS_TOKEN"
+        - lang: Python
+          source: |
+            from rev_ai import apiclient
+            access_token = 'your_access_token'
+            job_id = 'your_job_id'
+
+            # Create client with your access token
+            client = apiclient.RevAiAPIClient(access_token)
+
+            # Delete job
+            client.delete_job(job_id)
+        - lang: JavaScript
+          label: Node
+          source: |
+            import { RevAiApiClient } from 'revai-node-sdk';
+            var accessToken = "yourAccessToken";
+            var jobId = "yourJobId";
+
+            // Initialize your client with your access token
+            var client = new RevAiApiClient(accessToken);
+
+            // Delete job
+            await client.deleteJob(jobId);
+        - lang: Java
+          source: |
+            String accessToken = "Your Access Token";
+            String jobId = "yourJobId";
+
+            // Initialize your client with your access token
+            ApiClient apiClient = new ApiClient(accessToken);
+
+            // Delete job
+            apiClient.deleteJob(jobId);
+  /jobs:
+    get:
+      summary: Get List of Jobs
+      operationId: GetListOfJobs
+      description: Gets a list of transcription jobs submitted within the last 30 days in reverse chronological order up to the provided `limit` number of jobs per call. **Note:** Jobs older than 30 days will not be listed. Pagination is supported via passing the last job `id` from a previous call into `starting_after`.
+      tags:
+        - Jobs
+      parameters:
+        - $ref: '#/components/parameters/JobListLimit'
+        - $ref: '#/components/parameters/JobListStartingAfter'
+      responses:
+        '200':
+          description: List of Rev AI Transcription Jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AsyncTranscriptionJob'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestProblemDetails'
+              examples:
+                Limit Above Max Value:
+                  $ref: '#/components/examples/BadLimitResponse'
+                Invalid Job Id:
+                  $ref: '#/components/examples/InvalidStartingAfterResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-code-samples:
+        - lang: Shell
+          label: curl
+          source: |
+            # Get list of jobs with a limit of 10 jobs
+            curl -X GET "https://api.rev.ai/speechtotext/v1/jobs?limit=10" -H "Authorization: Bearer $REV_ACCESS_TOKEN"
+
+            # Get list of jobs starting after (submitted before) job with id Umx5c6F7pH7r
+            curl -X GET "https://api.rev.ai/speechtotext/v1/jobs?starting_after=Umx5c6F7pH7r" -H "Authorization: Bearer $REV_ACCESS_TOKEN"
+        - lang: Python
+          source: |
+            from rev_ai import apiclient
+            access_token = 'your_access_token'
+
+            # Create client with your access token
+            client = apiclient.RevAiAPIClient(access_token)
+
+            # Get list of jobs with a limit of 10 jobs
+            jobs = client.get_list_of_jobs(limit=10)
+
+            # Get list of jobs starting after (submitted before) job with id Umx5c6F7pH7r
+            jobs = client.get_list_of_jobs(starting_after='Umx5c6F7pH7r')
+        - lang: JavaScript
+          label: Node
+          source: |
+            import { RevAiApiClient } from 'revai-node-sdk';
+            var accessToken = "yourAccessToken";
+
+            // Initialize your client with your access token
+            var client = new RevAiApiClient(accessToken);
+
+            // Get list of jobs with a limit of 10 jobs
+            var jobs = await client.getListOfJobs(10);
+
+            // Get list of jobs starting after (submitted before) job with id Umx5c6F7pH7r
+            var jobs = await client.getListOfJobs(undefined, 'Umx5c6F7pH7r');
+        - lang: Java
+          source: |
+            String accessToken = "Your Access Token";
+
+            // Initialize your client with your access token
+            ApiClient apiClient = new ApiClient(accessToken);
+
+            // Get list of jobs with a limit of 10 jobs
+            int numberOfJobsToReturn = 10;
+            List<RevAiJob> tenJobs = apiClient.getListOfJobs(numberOfJobsToReturn);
+
+            // Get list of jobs starting after (submitted before) job with id Umx5c6F7pH7r
+            String jobId = "Umx5c6F7pH7r";
+            List<RevAiJob> jobsStartingAfter = apiClient.getListOfJobs(jobId);
+    post:
+      summary: Submit Transcription Job
+      operationId: SubmitTranscriptionJob
+      description: Starts an asynchronous job to transcribe speech-to-text for a media file. Media files can be specified in two ways, either by including a public url to the media in the transcription job `options` or by uploading a local file as part of a multipart/form request.
+      tags:
+        - Jobs
+      requestBody:
+        description: Transcription Job Options
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitJobMediaUrlOptions'
+            examples:
+              Example:
+                value:
+                  metadata: example metadata
+                  callback_url: https://www.example.com/callback
+                  media_url: https://www.rev.ai/FTC_Sample_1.mp3
+                  transcriber: machine
+                  skip_diarization: false
+                  skip_punctuation: false
+                  remove_disfluencies: false
+                  filter_profanity: false
+                  speaker_channel_count: 1
+                  delete_after_seconds: 2592000
+                  custom_vocabulary_id: cvgnDwmB6iXevn
+                  language: en
+              Human Transcription:
+                value:
+                  metadata: example metadata
+                  callback_url: https://www.example.com/callback
+                  media_url: https://www.rev.ai/FTC_Sample_1.mp3
+                  transcriber: human
+                  rush: false
+                  verbatim: false
+                  segments_to_transcribe:
+                    - start: 0.5
+                      end: 120.7
+                    - start: 240
+                      end: 420.7
+                  speaker_names:
+                    - display_name: Jane Doe
+                    - display_name: John Smith
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                media:
+                  type: string
+                  format: binary
+                  description: |
+                    Limited to files less than 2GB in size.
+                    If the file is larger than 2GB, submit a transcription job using `media_url`.
+                    **Note:** Media files longer than 17 hours are not supported for English transcription.
+                    Media files longer than 6 hours are not supported for non-English transcription with languages codes `fa`, `he`, `id`, `ta` and `te`.
+                    The other non-English language codes support media files with duration up to 12 hours.
+                    For non-English jobs, expected turnaround time can be up to 6 hours.
+                options:
+                  nullable: true
+                  allOf:
+                    - $ref: '#/components/schemas/SubmitJobOptions'
+      responses:
+        '200':
+          description: Transcription Job Details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncTranscriptionJob'
+              examples:
+                New Job:
+                  $ref: '#/components/examples/NewJob'
+        '400':
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/BadRequestProblemDetails'
+              example:
+                parameter:
+                  media_url:
+                    - The media_url field is required
+                type: https://www.rev.ai/api/v1/errors/invalid-parameters
+                title: Your request parameters didn't validate
+                status: 400
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+      x-code-samples:
+        - lang: Shell
+          label: curl
+          source: |
+            # Submit via media URL. URL must be publicly accessible and a direct link to media, note that custom_vocabularies parameter is optional
+            curl -X POST "https://api.rev.ai/speechtotext/v1/jobs" -H "Authorization: Bearer $REV_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"media_url\":\"https://www.rev.ai/FTC_Sample_1.mp3\",\"metadata\":\"This is a sample submit jobs option\", \"custom_vocabularies\":[{\"phrases\": [\"Amelia Earhart\", \"Paul McCartney\"]}]}"
+
+            # Submit for local uploads. Must include the audio type, note that custom_vocabularies parameter is optional
+            curl -X POST "https://api.rev.ai/speechtotext/v1/jobs" -H "Authorization: Bearer $REV_ACCESS_TOKEN" -H "Content-Type: multipart/form-data" -F "media=@/path/to/media_file.mp3;type=audio/mp3" -F "options={\"metadata\":\"This is a sample submit jobs option for multipart\", \"custom_vocabularies\":[{\"phrases\": [\"Amelia Earhart\", \"Paul McCartney\"]}]}"
+        - lang: Python
+          source: |
+            from rev_ai import apiclient
+            from rev_ai.models import CustomVocabulary
+            access_token = 'your_access_token'
+
+            # (optional) Create custom_vocabularies to submit with job
+            custom_vocabularies = [CustomVocabulary(["Amelia Earhart", "Paul McCartney"])]
+
+            # Create client with your access token
+            client = apiclient.RevAiAPIClient(access_token)
+
+            # Submit job from media url
+            url_job = client.submit_job_url(media_url="https://www.rev.ai/FTC_Sample_1.mp3", metadata="My_metadata", callback_url="https://example.com/callback", skip_diarization=False, custom_vocabularies=custom_vocabularies)
+
+            # Submit from local file
+            file_job = client.submit_job_local_file(filename="/path/to/media/file.mp3", metadata="This_is_some_job_metadata", callback_url="https://example.com/callback", skip_diarization=False, custom_vocabularies=custom_vocabularies)
+        - lang: JavaScript
+          label: Node
+          source: |
+            const revai = require('revai-node-sdk');
+            // ES6 compliant alternative import method also available below.
+            // Note however that this is not as widely supported as the require syntax.
+            // import {RevAiApiClient} from 'revai-node-sdk';
+
+            var accessToken = "yourAccessToken";
+
+            // Initialize your client with your access token
+            var client = new revai.RevAiApiClient(accessToken);
+
+            // (optional) Create a job options object to include additional optional parameters
+            var jobOptions = {
+                metadata: 'Sample submit job',
+                callback_url: 'https://example.com/callback',
+                skip_diarization: false,
+                custom_vocabularies: [{
+                    phrases: [
+                        "Amelia Earhart",
+                        "Paul McCartney"
+                    ]
+                }]
+            };
+
+            // Submit job from media url
+            var urlJob = client.submitJobUrl("https://www.rev.ai/FTC_Sample_1.mp3", jobOptions);
+
+            // Submit from local file
+            var fileJob = client.submitJobLocalFile("/path/to/file.mp4", jobOptions);
+        - lang: Java
+          source: |
+            String accessToken = "Your Access Token";
+
+            // Initialize your client with your access token
+            ApiClient apiClient = new ApiClient(accessToken);
+
+            // (optional) Create a job options object to include additional optional parameters
+            RevAiJobOptions revAiJobOptions = new RevAiJobOptions();
+            revAiJobOptions.setMetadata("Sample submit job");
+            revAiJobOptions.setCallbackUrl("https://example.com/callback");
+            revAiJobOptions.setSkipDiarization(false);
+            revAiJobOptions.setSkipPunctuation(false);
+
+            // Submit job from media url
+            String urlLinkToFile = "https://www.rev.ai/FTC_Sample_1.mp3";
+            RevAiJob urlJob apiClient.submitJobUrl(urlLinkToFile, revAiJobOptions);
+
+            // Submit from local file
+            String pathToLocalFile = "/path/to/file.mp4"
+            RevAiJob fileJob = apiClient.submitJobLocalFile(pathToLocalFile, revAiJobOptions);
+  /jobs/{id}/transcript:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
+    get:
+      summary: Get Transcript By Id
+      operationId: GetTranscriptById
+      description: |
+        Returns the transcript for a completed transcription job. Transcript can be returned as either JSON or plaintext format. Transcript output format can be specified in the `Accept` header. Returns JSON by default.
+        ***
+        Note: For streaming jobs, transient failure of our storage during a live session may prevent the final hypothesis elements from saving properly, resulting in an incomplete transcript. This is rare, but not impossible. To guarantee 100% completeness, we recommend capturing all final hypothesis when you receive them on the client.
+      tags:
+        - Transcripts
+      parameters:
+        - $ref: '#/components/parameters/acceptTranscript'
+      responses:
+        '200':
+          description: |
+            Rev AI API Transcript
+            ***
+            Note: Transcript output format is required in the Accept header. Output can either be in Rev's JSON format or plaintext.
+          content:
+            application/vnd.rev.transcript.v1.0+json:
+              schema:
+                $ref: '#/components/schemas/Transcript'
+              examples:
+                skip_diarization false && skip_punctuation false:
+                  value:
+                    monologues:
+                      - speaker: 1
+                        elements:
+                          - type: text
+                            value: Hello
+                            ts: 0.5
+                            end_ts: 1.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: World
+                            ts: 1.75
+                            end_ts: 2.85
+                            confidence: 0.8
+                          - type: punct
+                            value: .
+                      - speaker: 2
+                        elements:
+                          - type: text
+                            value: monologues
+                            ts: 3
+                            end_ts: 3.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: are
+                            ts: 3.6
+                            end_ts: 3.9
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: a
+                            ts: 4
+                            end_ts: 4.3
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: block
+                            ts: 4.5
+                            end_ts: 5.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: of
+                            ts: 5.75
+                            end_ts: 6.14
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: unknown
+                            value: <inaudible>
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: text
+                            ts: 6.5
+                            end_ts: 7.78
+                            confidence: 1
+                          - type: punct
+                            value: .
+                skip_diarization true && skip_punctuation false:
+                  value:
+                    monologues:
+                      - speaker: 1
+                        elements:
+                          - type: text
+                            value: Hello
+                            ts: 0.5
+                            end_ts: 1.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: World
+                            ts: 1.75
+                            end_ts: 2.85
+                            confidence: 0.8
+                          - type: punct
+                            value: .
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: monologues
+                            ts: 3
+                            end_ts: 3.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: are
+                            ts: 3.6
+                            end_ts: 3.9
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: a
+                            ts: 4
+                            end_ts: 4.3
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: block
+                            ts: 4.5
+                            end_ts: 5.5
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: of
+                            ts: 5.75
+                            end_ts: 6.14
+                            confidence: 1
+                          - type: punct
+                            value: ' '
+                          - type: unknown
+                            value: <inaudible>
+                          - type: punct
+                            value: ' '
+                          - type: text
+                            value: text
+                            ts: 6.5
+                            end_ts: 7.78
+                            confidence: 1
+                          - type: punct
+                            value: .
+                skip_diarization false && skip_punctuation true:
+                  value:
+                    monologues:
+                      - speaker: 1
+                        elements:
+                          - type: text
+                            value: Hello
+                            ts: 0.5
+                            end_ts: 1.5
+                            confidence: 1
+                          - type: text
+                            value: World
+                            ts: 1.75
+                            end_ts: 2.85
+                            confidence: 0.8
+                      - speaker: 2
+                        elements:
+                          - type: text
+                            value: monologues
+                            ts: 3
+                            end_ts: 3.5
+                            confidence: 1
+                          - type: text
+                            value: are
+                            ts: 3.6
+                            end_ts: 3.9
+                            confidence: 1
+                          - type: text
+                            value: a
+                            ts: 4
+                            end_ts: 4.3
+                            confidence: 1
+                          - type: text
+                            value: block
+                            ts: 4.5
+                            end_ts: 5.5
+                            confidence: 1
+                          - type: text
+                            value: of
+                            ts: 5.75
+                            end_ts: 6.14
+                            confidence: 1
+                          - type: unknown
+                            value: <inaudible>
+                          - type: text
+                            value: text
+                            ts: 6.5
+                            end_ts: 7.78
+                            confidence: 1
+                skip_diarization true && skip_punctuation true:
+                  value:
+                    monologues:
+                      - speaker: 1
+                        elements:
+                          - type: text
+                            value: Hello
+                            ts: 0.5
+                            end_ts: 1.5
+                            confidence: 1
+                          - type: text
+                            value: World
+                            ts: 1.75
+                            end_ts: 2.85
+                            confidence: 0.8
+                          - type: text
+                            value: monologues
+                            ts: 3
+                            end_ts: 3.5
+                            confidence: 1
+                          - type: text
+                            value: are
+                            ts: 3.6
+                            end_ts: 3.9
+                            confidence: 1
+                          - type: text
+                            value: a
+                            ts: 4
+                            end_ts: 4.3
+                            confidence: 1
+                          - type: text
+                            value: block
+                            ts: 4.5
+                            end_ts: 5.5
+                            confidence: 1
+                          - type: text
+                            value: of
+                            ts: 5.75
+                            end_ts: 6.14
+                            confidence: 1
+                          - type: unknown
+                            value: <inaudible>
+                          - type: text
+                            value: text
+                            ts: 6.5
+                            end_ts: 7.78
+                            confidence: 1
+                transcriber human && speaker_names provided:
+                  value:
+                    monologues:
+                      - speaker: 1
+                        speaker_info:
+                          id: 1
+                          display_name: Jane Doe
+                        elements:
+                          - type: text
+                            value: Hello
+                            ts: 0.5
+                            end_ts: 1.5
+                            confidence: 1
+                          - type: text
+                            value: World
+                            ts: 1.75
+                            end_ts: 2.85
+                            confidence: 0.8
+                          - type: text
+                            value: monologues
+                            ts: 3
+                            end_ts: 3.5
+                            confidence: 1
+                          - type: text
+                            value: are
+                            ts: 3.6
+                            end_ts: 3.9
+                            confidence: 1
+                          - type: text
+                            value: a
+                            ts: 4
+                            end_ts: 4.3
+                            confidence: 1
+                          - type: text
+                            value: block
+                            ts: 4.5
+                            end_ts: 5.5
+                            confidence: 1
+                          - type: text
+                            value: of
+                            ts: 5.75
+                            end_ts: 6.14
+                            confidence: 1
+                          - type: unknown
+                            value: <inaudible>
+                          - type: text
+                            value: text
+                            ts: 6.5
+                            end_ts: 7.78
+                            confidence: 1
+            text/plain:
+              schema:
+                type: string
+              examples:
+                skip_diarization false && skip_punctuation false:
+                  value: |
+                    Speaker 0    00:00:00    Hello there, this is a sample transcript in plain text.
+                    Speaker 1    00:00:43    Words are returned with spaces between them.
+                skip_diarization true && skip_punctuation false:
+                  value: |
+                    Speaker 0    00:00:01    Hello there, this is a sample transcript in plain text. Words are returned with spaces between them.
+                skip_diarization false && skip_punctuation true:
+                  value: |
+                    Speaker 0    00:00:00    Hello there this is a sample transcript in plain text
+                    Speaker 1    00:00:43    Words are returned with spaces between them
+                skip_diarization true && skip_punctuation true:
+                  value: |
+                    Speaker 0    00:00:01    Hello there this is a sample transcript in plain text Words are returned with spaces between them
+                transcriber human && speaker_names provided:
+                  value: |
+                    Jane Doe    00:00:00    Hello there this is a sample transcript in plain text
+                    John Smith    00:00:43    Words are returned with spaces between them
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/JobNotFound'
+        '406':
+          $ref: '#/components/responses/InvalidTranscriptFormat'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  value:
+                    allowed_values:
+                      - transcribed
+                    current_value: in_progress
+                    type: https://rev.ai/api/v1/errors/invalid-job-state
+                    title: Job is in invalid state
+                    detail: Job is in invalid state to obtain the output
+                    status: 409
+      x-code-samples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -X GET "https://api.rev.ai/speechtotext/v1/jobs/{id}/transcript" -H "Authorization: Bearer $REV_ACCESS_TOKEN" -H "Accept: application/vnd.rev.transcript.v1.0+json"
+        - lang: Python
+          source: |
+            import json
+            from rev_ai import apiclient
+            access_token = 'your_access_token'
+            job_id = 'your_job_id'
+
+            # Create client with your access token
+            client = apiclient.RevAiAPIClient(access_token)
+
+            # Get transcript as text
+            transcript_text = client.get_transcript_text(job_id)
+            print(transcript_text)
+
+            # Get transcript as json
+            transcript_json = client.get_transcript_json(job_id)
+            print(json.dumps(transcript_json))
+
+            # Get transcript as object
+            transcript_obj = client.get_transcript_object(job_id)
+            print(transcript_obj)
+        - lang: JavaScript
+          label: Node
+          source: |
+            import { RevAiApiClient } from 'revai-node-sdk';
+            var accessToken = "yourAccessToken";
+            var jobId = "yourJobId";
+
+            // Initialize your client with your access token
+            var client = new RevAiApiClient(accessToken);
+
+            // Get transcript as text
+            var transcriptText = await client.getTranscriptText(jobId);
+
+            // Get transcript as object
+            var transcriptObj = await client.getTranscriptObject(jobId);
+        - lang: Java
+          source: |
+            String accessToken = "Your Access Token";
+            String jobId = "yourJobId";
+
+            // Initialize your client with your access token
+            ApiClient apiClient = new ApiClient(accessToken);
+
+            // Get transcript as text
+            String transcriptText = apiClient.getTranscriptText(jobId);
+
+            // Get transcript as object
+            RevAiTranscript transcriptObj = apiClient.getTranscriptObject(jobId);
+  /jobs/{id}/captions:
+    parameters:
+      - $ref: '#/components/parameters/JobId'
+    get:
+      summary: Get Captions
+      operationId: GetCaptions
+      description: |
+        Returns the caption output for a transcription job. We currently support SubRip (SRT) and Web Video Text Tracks (VTT) output.
+        Caption output format can be specified in the `Accept` header. Returns SRT by default.
+        ***
+        Note: For streaming jobs, transient failure of our storage during a live session may prevent the final hypothesis elements from saving properly, resulting in an incomplete caption file. This is rare, but not impossible.
+      tags:
+        - Captions
+      parameters:
+        - $ref: '#/components/parameters/acceptCaption'
+        - in: query
+          name: speaker_channel
+          schema:
+            type: integer
+          required: false
+          description: Identifies which channel of the job output to caption. Default is `null` which works only for jobs with no `speaker_channels_count` provided during job submission.
+      responses:
+        '200':
+          description: |
+            Rev AI API Captions
+            ***
+            Note: Caption output format is required in the Accept header. The supported headers are `application/x-subrip` and `text/vtt`.
+            ([SRT](https://en.wikipedia.org/wiki/SubRip))
+          content:
+            application/x-subrip:
+              schema:
+                type: string
+              examples:
+                SubRip Text (SRT):
+                  value: |
+                    1
+                    00:00:01,210 --> 00:00:04,840
+                    Hello there, this is a example captions output
+
+                    2
+                    00:00:07,350 --> 00:00:10,970
+                    Each caption group is in the SubRip Text
+                    file format
+            text/vtt:
+              schema:
+                type: string
+              examples:
+                WebVTT (VTT):
+                  value: |
+                    WebVTT
+
+                    1
+                    00:00:01,210 ==> 00:00:04,840
+                    Hello there,
+                    this is an example captions output
+
+                    2
+                    00:00:07,350 --> 00:00:10,970
+                    Each caption group is in the vtt
+                    file format
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/JobNotFound'
+        '405':
+          $ref: '#/components/responses/InvalidJobPropertyCaptions'
+        '406':
+          $ref: '#/components/responses/InvalidCaptionFormat'
+        '409':
+          description: Conflict
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/InvalidStateDetails'
+              examples:
+                In Progress Job:
+                  value:
+                    allowed_values:
+                      - transcribed
+                    current_value: in_progress
+                    type: https://rev.ai/api/v1/errors/invalid-job-state
+                    title: Job is in invalid state
+                    detail: Job is in invalid state to obtain the output
+                    status: 409
+      x-code-samples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -X GET "https://api.rev.ai/speechtotext/v1/jobs/{id}/captions" -H "Authorization: Bearer $REV_ACCESS_TOKEN" -H "Accept: application/x-subrip"
+        - lang: Python
+          source: |
+            import json
+            from rev_ai import apiclient
+            access_token = 'your_access_token'
+            job_id = 'your_job_id'
+
+            # Create client with your access token
+            client = apiclient.RevAiAPIClient(access_token)
+
+            # Get captions
+            captions = client.get_captions(job_id)
+            print(captions)
+        - lang: JavaScript
+          label: Node
+          source: |
+            import { RevAiApiClient } from 'revai-node-sdk';
+            var accessToken = "yourAccessToken";
+            var jobId = "yourJobId";
+
+            // Initialize your client with your access token
+            var client = new RevAiApiClient(accessToken);
+
+            // Get captions
+            var captions = await client.getCaptions(jobId);
+        - lang: Java
+          source: |
+            String accessToken = "Your Access Token";
+            String jobId = "yourJobId";
+
+            // Initialize your client with your access token
+            ApiClient apiClient = new ApiClient(accessToken);
+
+            // Get captions
+            InputStream captions = apiClient.getCaptions(jobId);
+  /account:
+    get:
+      summary: Get Account
+      operationId: GetAccount
+      description: Get the developer's account information
+      tags:
+        - Accounts
+      responses:
+        '200':
+          description: Rev AI Account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      x-code-samples:
+        - lang: Shell
+          label: curl
+          source: |
+            curl -X GET "https://api.rev.ai/speechtotext/v1/account" -H "Authorization: Bearer $REV_ACCESS_TOKEN"
+        - lang: Python
+          source: |
+            from rev_ai import apiclient
+            access_token = 'your_access_token'
+
+            # Create client with your access token
+            client = apiclient.RevAiAPIClient(access_token)
+
+            # Get account info
+            account = client.get_account()
+            print(account.email)
+            print(account.balance_seconds)
+        - lang: JavaScript
+          label: Node
+          source: |
+            import { RevAiApiClient } from 'revai-node-sdk';
+            var accessToken = "yourAccessToken";
+
+            // Initialize your client with your access token
+            var client = new RevAiApiClient(accessToken);
+
+            // Get account info
+            var account = await client.getAccount();
+        - lang: Java
+          source: |
+            String accessToken = "Your Access Token";
+
+            // Initialize your client with your access token
+            ApiClient apiClient = new ApiClient(accessToken);
+
+            // Get account info
+            RevAiAccount account = apiClient.getAccount();
+components:
+  securitySchemes:
+    AccessToken:
+      type: http
+      scheme: bearer
+  parameters:
+    JobId:
+      name: id
+      in: path
+      description: Rev AI API Job Id
+      required: true
+      schema:
+        type: string
+    JobListLimit:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        default: 100
+        maximum: 1000
+        minimum: 0
+        nullable: true
+      required: false
+      description: Limits the number of jobs returned, default is 100, max is 1000
+    JobListStartingAfter:
+      in: query
+      name: starting_after
+      schema:
+        type: string
+        nullable: true
+      required: false
+      description: If specified, returns jobs submitted before the job with this id, exclusive (job with this id is not included)
+    acceptTranscript:
+      name: Accept
+      in: header
+      description: MIME type specifying the transcription output format
+      required: false
+      schema:
+        type: string
+        enum:
+          - application/vnd.rev.transcript.v1.0+json
+          - text/plain
+    acceptCaption:
+      name: Accept
+      in: header
+      description: MIME type specifying the caption output format
+      required: false
+      schema:
+        type: string
+        enum:
+          - application/x-subrip
+          - text/vtt
+  schemas:
+    AudioAnalysisStatusField:
+      type: string
+      enum:
+        - in_progress
+        - transcribed
+        - failed
+      description: Current status of the job
+      example: transcribed
+    CreatedOnField:
+      type: string
+      format: date-time
+      description: The date and time the job was created in ISO-8601 UTC form.
+      example: '2018-05-05T23:23:22.29Z'
+    CompletedOnField:
+      type: string
+      format: date-time
+      description: The date and time the job was completed, whether successfully or failing, in ISO-8601 UTC form.
+      nullable: true
+      example: '2018-05-05T23:28:22.29Z'
+    MetadataField:
+      type: string
+      maxLength: 512
+      description: Optional metadata that was provided during job submission.
+      nullable: true
+    FileNameField:
+      type: string
+      description: Name of the file provided. Present when the file name is available
+      nullable: true
+      example: sample_audio.mp3
+    FileDurationSecondsField:
+      type: number
+      format: double
+      description: Duration of the file in seconds. Null if the file could not be retrieved or there was not a valid media file
+      nullable: true
+      example: 324.36
+    AudioAnalysisFailureField:
+      type: string
+      description: Simple reason of why the transcription job failed. Check `failure_detail` for specific details and solutions
+      enum:
+        - internal_processing
+        - download_failure
+        - duration_exceeded
+        - duration_too_short
+        - invalid_media
+        - empty_media
+        - transcription
+        - insufficient_balance
+        - invoicing_limit_exceeded
+        - custom_vocabulary
+      nullable: true
+      example: download_failure
+    FailureDetailField:
+      type: string
+      description: Human-readable reason why the job failed.
+      nullable: true
+      example: Internal server error.
+    CallbackUrlField:
+      type: string
+      maxLength: 1024
+      description: Callback url provided by the user.
+      nullable: true
+    MediaUrlField:
+      description: Media url provided by the job submission. Null if the job was provided using a local file.
+      type: string
+      nullable: true
+      maxLength: 2048
+      example: https://www.rev.ai/FTC_Sample_1.mp3
+    DeleteAfterSecondsField:
+      description: Amount of time after job completion when job is auto-deleted. Present only when preference set in job request.
+      type: integer
+      minimum: 0
+      maximum: 2592000
+      nullable: true
+    OptionalFlagField:
+      type: boolean
+      default: false
+      nullable: true
+      example: true
+    CustomVocabularyIdField:
+      description: User-supplied custom vocabulary ID to be used with job for transcription.
+      type: string
+      nullable: true
+      example: cvgnDwmB6iXevn
+    SpeakerChannelsCountField:
+      description: User-supplied number of speaker channels in the audio.
+      type: integer
+      minimum: 1
+      maximum: 8
+      nullable: true
+      example: 2
+    AsyncLanguageField:
+      description: User-supplied language to transcribe the audio into.
+      type: string
+      default: en
+      nullable: true
+      example: en
+      enum:
+        - en
+        - ar
+        - bg
+        - ca
+        - cmn
+        - cs
+        - da
+        - de
+        - el
+        - es
+        - fa
+        - fi
+        - fr
+        - he
+        - hi
+        - hr
+        - hu
+        - id
+        - it
+        - ja
+        - ko
+        - lt
+        - lv
+        - ms
+        - nl
+        - 'no'
+        - pl
+        - pt
+        - ro
+        - ru
+        - sk
+        - sl
+        - sv
+        - ta
+        - te
+        - tr
+    TranscriberField:
+      description: User-supplied transcriber to transcribe the audio file.
+      type: string
+      default: machine
+      nullable: true
+      example: machine
+      enum:
+        - machine
+        - human
+        - machine_v2
+    AsyncTranscriptionJob:
+      type: object
+      description: |
+        Rev AI Transcription Job
+        ***
+        Note: properties are not displayed in the returned object if they are null
+      properties:
+        id:
+          type: string
+          description: Id of the job
+          example: Umx5c6F7pH7r
+        status:
+          $ref: '#/components/schemas/AudioAnalysisStatusField'
+        created_on:
+          $ref: '#/components/schemas/CreatedOnField'
+        completed_on:
+          $ref: '#/components/schemas/CompletedOnField'
+        metadata:
+          description: Optional metadata that was provided during job submission
+          allOf:
+            - $ref: '#/components/schemas/MetadataField'
+        name:
+          $ref: '#/components/schemas/FileNameField'
+        duration_seconds:
+          $ref: '#/components/schemas/FileDurationSecondsField'
+        failure:
+          $ref: '#/components/schemas/AudioAnalysisFailureField'
+        failure_detail:
+          example: Failed to download media file. Please check your url and file type
+          allOf:
+            - $ref: '#/components/schemas/FailureDetailField'
+        type:
+          type: string
+          description: Type of speech recognition performed.
+          enum:
+            - async
+          nullable: false
+          example: async
+        callback_url:
+          $ref: '#/components/schemas/CallbackUrlField'
+        media_url:
+          $ref: '#/components/schemas/MediaUrlField'
+        delete_after_seconds:
+          $ref: '#/components/schemas/DeleteAfterSecondsField'
+        skip_diarization:
+          description: User-supplied preference on whether to skip diarization.
+          allOf:
+            - $ref: '#/components/schemas/OptionalFlagField'
+        skip_punctuation:
+          description: User-supplied preference on whether to skip punctuation.
+          allOf:
+            - $ref: '#/components/schemas/OptionalFlagField'
+        remove_disfluencies:
+          description: User-supplied preference on whether to remove disfluencies.
+          allOf:
+            - $ref: '#/components/schemas/OptionalFlagField'
+        filter_profanity:
+          description: User-supplied preference on whether to remove explicit words.
+          allOf:
+            - $ref: '#/components/schemas/OptionalFlagField'
+        custom_vocabulary_id:
+          $ref: '#/components/schemas/CustomVocabularyIdField'
+        speaker_channels_count:
+          $ref: '#/components/schemas/SpeakerChannelsCountField'
+        language:
+          $ref: '#/components/schemas/AsyncLanguageField'
+        transcriber:
+          $ref: '#/components/schemas/TranscriberField'
+      example:
+        id: Umx5c6F7pH7r
+        status: in_progress
+        created_on: '2018-05-05T23:23:22.29Z'
+        type: async
+        delete_after_seconds: 50
+        transcriber: machine
+    BaseProblemDetails:
+      type: object
+      description: Problem details object returned on errors
+      properties:
+        title:
+          type: string
+          description: Short, human-readable summary of the problem type
+        type:
+          type: string
+          description: URI that identifies the problem
+        status:
+          type: integer
+          description: HTTP status code of the error
+    InvalidStateDetails:
+      allOf:
+        - $ref: '#/components/schemas/BaseProblemDetails'
+        - type: object
+          properties:
+            current_value:
+              type: string
+              description: Value passed in given request
+            allowed_values:
+              type: array
+              description: Allowed values for this request
+              items:
+                type: string
+            detail:
+              type: string
+              description: Human-readable explanation specific to this occurrence of the problem
+    BadRequestProblemDetails:
+      allOf:
+        - $ref: '#/components/schemas/BaseProblemDetails'
+        - type: object
+          properties:
+            parameters:
+              description: Invalid properties object where each property is the key, mapped to a list of reasons why the property is invalid
+              type: object
+              additionalProperties: true
+    VerbatimField:
+      description: |
+        **Only available for `human` transcriber option** When this field is set to true
+        the transcriber will transcribe every syllable. This will include all false starts,
+        and disfluencies in the transcript.
+      allOf:
+        - $ref: '#/components/schemas/OptionalFlagField'
+    RushField:
+      description: |
+        **Only available for `human` transcriber option** When this field is set to true
+        your job is given higher priority and will be worked on sooner by our human transcribers.
+      allOf:
+        - $ref: '#/components/schemas/OptionalFlagField'
+    TestModeField:
+      description: |
+        **Only available for `human` transcriber option** When this field is set to true
+        the behavior will mock a normal human transcription job except no transcription will
+        happen. The primary use case is to test integrations without being charged for human
+        transcription.
+      allOf:
+        - $ref: '#/components/schemas/OptionalFlagField'
+    SegmentsToTranscribeField:
+      description: |
+        **Only available for `human` transcriber option**. Use this option to specify which
+        sections of the transcript need to be transcribed. Segments must be at least two minutes
+        in length and cannot overlap.
+      type: array
+      nullable: true
+      items:
+        type: object
+        properties:
+          start:
+            type: number
+            description: |
+              The timestamp of the beginning of the segment relative to the beginning of the audio in seconds (centisecond precision)
+          end:
+            type: number
+            description: |
+              The timestamp of the end of the segment relative to the beginning of the audio in seconds (centisecond precision)
+    SpeakerNamesField:
+      description: |
+        **Only available for `human` transcriber option**. Use this option to specify up to 100 names of speakers in
+        the transcript. Names may only be up to 50 characters long.
+      type: array
+      minItems: 0
+      maxItems: 100
+      nullable: true
+      items:
+        type: object
+        required:
+          - display_name
+        properties:
+          display_name:
+            type: string
+            minLength: 1
+            maxLength: 50
+            description: |
+              The name of the speaker to be used when labeling monologues. Max of 50 characters.
+    CustomVocabulariesField:
+      type: array
+      minItems: 1
+      maxItems: 50
+      items:
+        type: object
+        description: Contains a collection of phrases. Custom vocabulary informs and biases the speech recognition to find those phrases (at the cost of slightly slower transcription).
+        required:
+          - phrases
+        properties:
+          phrases:
+            type: array
+            minItems: 1
+            maxItems: 6000
+            description: |
+              Array of phrases not found in normal dictionary. Add technical jargon, proper nouns and uncommon phrases as strings in this array to add them to the lexicon for this job.
+
+              A phrase must contain at least 1 alpha character but may contain any non-numeric character from the Basic Latin set. A phrase can contain up to 12 words. Each word can contain up to 34 characters.
+
+              **Note**: Only 6000 phrases can be used per transcription job. For more details, check [Custom Vocabularies](https://www.rev.ai/docs/overview#section/Features/Custom-Vocabularies).
+            items:
+              type: string
+              title: phrase
+            example:
+              - Paul McCartney
+              - Amelia Earhart
+              - Weiss-Bergman
+              - BLM
+    SubmitJobOptions:
+      allOf:
+        - type: object
+          description: Rev AI Job Options Object Model
+          properties:
+            metadata:
+              description: Optional metadata that was provided during submission
+              allOf:
+                - $ref: '#/components/schemas/MetadataField'
+            callback_url:
+              description: Optional callback url to invoke when processing is complete
+              allOf:
+                - $ref: '#/components/schemas/CallbackUrlField'
+            transcriber:
+              description: |
+                Select which service you would like to transcribe this file with.
+
+                | Model        | Description                                                        |
+                |--------------|--------------------------------------------------------------------|
+                | `machine`    | the default and routes to our standard model                       |
+                | `machine_v2` | routes the file to our v2 ASR model                                |
+                | `human`      | **Rev AI Labs Feature**: routes the file to our human transcribers |
+              allOf:
+                - $ref: '#/components/schemas/TranscriberField'
+            verbatim:
+              $ref: '#/components/schemas/VerbatimField'
+            rush:
+              $ref: '#/components/schemas/RushField'
+            test_mode:
+              $ref: '#/components/schemas/TestModeField'
+            segments_to_transcribe:
+              $ref: '#/components/schemas/SegmentsToTranscribeField'
+            speaker_names:
+              $ref: '#/components/schemas/SpeakerNamesField'
+            skip_diarization:
+              description: Specify if speaker diarization will be skipped by the speech engine
+              allOf:
+                - $ref: '#/components/schemas/OptionalFlagField'
+            skip_punctuation:
+              description: |
+                Specify if "punct" type elements will be skipped by the speech engine. For JSON outputs, this includes removing spaces. For text outputs,
+                words will still be delimited by a space
+              allOf:
+                - $ref: '#/components/schemas/OptionalFlagField'
+            remove_disfluencies:
+              description: |
+                Currently we only define disfluencies as 'ums' and 'uhs'. When set to true, disfluencies will be not appear in the transcript.
+              allOf:
+                - $ref: '#/components/schemas/OptionalFlagField'
+            filter_profanity:
+              description: |
+                Enabling this option will filter for approx. 600 profanities, which cover most use cases. If a transcribed word matches a word on this list, then all the characters of that word will be replaced by asterisks except for the first and last character.
+              allOf:
+                - $ref: '#/components/schemas/OptionalFlagField'
+            speaker_channels_count:
+              description: |
+                Use to specify the total number of unique speaker channels in the audio.
+
+                Given the number of audio channels provided, each channel will be transcribed
+                separately and the channel id assigned to the `speaker` label. The final output will be a combination of all individual channel outputs. Overlapping `monologues` will have ordering broken
+                by the order in which the first spoken `element` of each `monologue` occurs. If `speaker_channels_count` is greater than the actual channels in the audio,
+                the job will fail with `invalid_media`.
+
+                **Note:**
+                  - The amount charged will be the duration of the file multiplied by the number of channels specified.
+                  - When using `speaker_channels_count` each channel will be diarized as one speaker, and the value of `skip_diarization` will be ignored if provided
+              allOf:
+                - $ref: '#/components/schemas/SpeakerChannelsCountField'
+            delete_after_seconds:
+              description: |
+                Specify the number of seconds after job completion when job is auto-deleted. It may take up to 2 minutes after the scheduled time for the job to be deleted.
+                The number of seconds provided must range from `0` seconds to `2592000` seconds (30 days).
+              allOf:
+                - $ref: '#/components/schemas/DeleteAfterSecondsField'
+            custom_vocabulary_id:
+              description: |
+                **This feature is in beta.** You can supply the id of a pre-completed custom vocabulary that you submitted through the [Custom Vocabularies API](https://rev.ai/docs/streaming#operation/SubmitCustomVocabulary) instead of uploading the list of phrases using the `custom_vocabularies` parameter. Using `custom_vocabulary_id` or `custom_vocabularies` with the same list of phrases yields the same transcription result, but `custom_vocabulary_id` allows your submission to finish processing faster by 6 seconds on average.
+
+                You cannot use both `custom_vocabulary_id` and `custom_vocabularies` at the same time, and doing so will result in a 400 response. If the supplied id represents an incomplete, deleted, or non-existent custom vocabulary then you will receive a 404 response.
+              allOf:
+                - $ref: '#/components/schemas/CustomVocabularyIdField'
+            custom_vocabularies:
+              description: |
+                Specify a collection of custom vocabulary to be used for this job. Custom vocabulary informs and biases the speech recognition to find those phrases (at the cost of slightly slower transcription).
+              allOf:
+                - $ref: '#/components/schemas/CustomVocabulariesField'
+            language:
+              description: |
+                `language` is provided as a [ISO 639-1 language code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), with the exception of Mandarin (cmn) which is supplied as an [ISO 639-3 language code](https://en.wikipedia.org/wiki/ISO_639-3).
+
+                Only 1 language can be selected per audio, i.e. no multiple languages in one transcription job.
+                Additionally, the following parameters may **not** be used with non-English languages: `skip_punctuation`, `remove_disfluencies`, `filter_profanity`, `speaker_channels_count`, `custom_vocabulary_id`.
+
+                You can provide a `language` parameter for transcribing audio in one of the following languages:
+
+                | Language   | ISO 639 Language Code                                |
+                |------------|-----------------------------------------------|
+                | Arabic     | ar |
+                | Bulgarian  | bg |
+                | Catalan    | ca |
+                | Croatian   | hr |
+                | Czech      | cs |
+                | Danish     | da |
+                | Dutch      | nl |
+                | English    | en |
+                | Farsi (Labs)      | fa |
+                | Finnish    | fi |
+                | French     | fr |
+                | German     | de |
+                | Greek      | el |
+                | Hebrew (Labs)     | he |
+                | Hindi      | hi |
+                | Hungarian  | hu |
+                | Indonesian (Labs) | id |
+                | Italian    | it |
+                | Japanese   | ja |
+                | Korean     | ko |
+                | Lithuanian | lt |
+                | Latvian    | lv |
+                | Malay      | ms |
+                | Mandarin   | cmn |
+                | Norwegian  | no |
+                | Polish     | pl |
+                | Portuguese | pt |
+                | Romanian   | ro |
+                | Russian    | ru |
+                | Slovak     | sk |
+                | Slovenian  | sl |
+                | Spanish    | es |
+                | Swedish    | sv |
+                | Tamil (Labs)      | ta |
+                | Telugu (Labs)     | te |
+                | Turkish    | tr |
+              allOf:
+                - $ref: '#/components/schemas/AsyncLanguageField'
+    SubmitJobMediaUrlOptions:
+      allOf:
+        - type: object
+          required:
+            - media_url
+          properties:
+            media_url:
+              type: string
+              description: |
+                Direct download media url. Ignored if submitting job from file.
+                **Note:** Media files longer than 17 hours are not supported for English transcription.
+                Media files longer than 6 hours are not supported for non-English transcription with languages codes `fa`, `he`, `id`, `ta` and `te`.
+                The other non-English language codes support media files with duration up to 12 hours.
+                For non-English jobs, expected turnaround time can be up to 6 hours.
+              maxLength: 2048
+              example: https://www.rev.ai/FTC_Sample_1.mp3
+        - $ref: '#/components/schemas/SubmitJobOptions'
+    SpeakerField:
+      type: integer
+      description: Id of the speaker of the monologue.
+      example: 1
+    SpeakerInfoField:
+      type: object
+      nullable: true
+      description: Information about the speaker for this monologue. Null if speaker_names option not provided or no speaker name detected.
+      properties:
+        id:
+          type: integer
+          description: Id of the speaker of the monologue
+          example: 1
+        display_name:
+          type: string
+          description: Human readable name of the speaker that was provided
+          example: Jane Doe
+    TsField:
+      type: number
+      description: |
+        The timestamp of the beginning of the element relative to the beginning of the audio in seconds (centisecond precision).
+    NullableTsField:
+      nullable: true
+      allOf:
+        - $ref: '#/components/schemas/TsField'
+    EndTsField:
+      type: number
+      description: |
+        The timestamp of the end of the element relative to the beginning of the audio in seconds (centisecond precision).
+    NullableEndTsField:
+      nullable: true
+      allOf:
+        - $ref: '#/components/schemas/EndTsField'
+    Transcript:
+      type: object
+      description: |
+        Rev AI Transcript Model
+      properties:
+        monologues:
+          type: array
+          items:
+            type: object
+            properties:
+              speaker:
+                $ref: '#/components/schemas/SpeakerField'
+              speaker_info:
+                $ref: '#/components/schemas/SpeakerInfoField'
+              elements:
+                type: array
+                description: Array of transcript elements
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - text
+                        - punct
+                        - unknown
+                      description: Type of transcript element.
+                      example: text
+                    value:
+                      type: string
+                      description: Value of the transcript element.
+                      example: Hello
+                    ts:
+                      $ref: '#/components/schemas/NullableTsField'
+                    end_ts:
+                      $ref: '#/components/schemas/NullableEndTsField'
+                    confidence:
+                      type: number
+                      format: double
+                      nullable: true
+                      minimum: 0
+                      maximum: 1
+                      description: Confidence score of the provided value. If the element `type` is `punct` or `unknown`, confidence will be `null`
+                      example: 0.85
+    Account:
+      type: object
+      description: Rev AI Account Model
+      properties:
+        email:
+          type: string
+          description: Email of developer account
+          example: jay@rev.ai
+        balance_seconds:
+          type: integer
+          description: Amount of Rev AI API credits remaining in seconds
+          example: 150
+  examples:
+    NewJob:
+      value:
+        id: Umx5c6F7pH7r
+        status: in_progress
+        language: en
+        created_on: '2018-05-05T23:23:22.29Z'
+        transcriber: machine
+    TranscribedJob:
+      value:
+        id: Umx5c6F7pH7r
+        status: transcribed
+        language: en
+        created_on: '2018-05-05T23:23:22.29Z'
+        completed_on: '2018-05-05T23:45:13.41Z'
+        callback_url: https://www.example.com/callback
+        duration_seconds: 356.24
+        media_url: https://www.rev.ai/FTC_Sample_1.mp3
+        transcriber: machine
+    FailedJob:
+      value:
+        id: Umx5c6F7pH7r
+        status: failed
+        language: en
+        created_on: '2018-05-05T23:23:22.29Z'
+        completed_on: '2018-05-05T23:23:24.11Z'
+        transcriber: machine
+        failure: download_failure
+        failure_detail: Failed to download media file. Please check your url and file type
+    BadLimitResponse:
+      value:
+        parameters:
+          limit:
+            - The max value for limit is 1000
+        type: https://www.rev.ai/api/v1/errors/invalid-parameters
+        title: Your request parameters didn't validate
+        status: 400
+    InvalidStartingAfterResponse:
+      value:
+        parameters:
+          starting_after:
+            - Invalid job ID
+        type: https://www.rev.ai/api/v1/errors/invalid-parameters
+        title: Your request parameters didn't validate
+        status: 400
+  responses:
+    Unauthorized:
+      description: |
+        Request Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            properties:
+              title:
+                type: string
+                description: Short, human-readable summary of the problem type
+              status:
+                type: integer
+                description: HTTP status code of the error
+          example:
+            title: Authorization has been denied for this request
+            status: 401
+    JobNotFound:
+      description: Job Not Found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/BaseProblemDetails'
+          example:
+            type: https://www.rev.ai/api/v1/errors/job-not-found
+            title: could not find job
+            status: 404
+    DeleteJobSuccessful:
+      description: |
+        Job was successfully deleted
+      content: {}
+    PayloadTooLarge:
+      description: |
+        Payload Too Large
+        ***
+        Only returned when job is submitted using a local file as part of `multipart/form-data`. Use a `media_url`
+        for files larger than 2GBs
+      content:
+        application/problem+json:
+          schema:
+            properties:
+              title:
+                type: string
+                description: Short, human-readable summary of the problem type
+              detail:
+                type: string
+                description: Human-readable explanation specific to this occurrence of the problem
+              status:
+                type: integer
+                description: HTTP status code of the error
+          example:
+            title: Payload Too Large
+            detail: Submitted payload exceeds maximum allowed file size
+            status: 413
+    InvalidTranscriptFormat:
+      description: Invalid Transcript Format
+      content:
+        application/problem+json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/BaseProblemDetails'
+              - type: object
+                properties:
+                  current_value:
+                    type: string
+                    description: Value passed in given request
+                  allowed_values:
+                    type: array
+                    description: Allowed values for this request
+                    items:
+                      type: string
+                  detail:
+                    type: string
+                    description: Human-readable explanation specific to this occurrence of the problem
+          example:
+            allowed_values:
+              - text/plain
+              - application/vnd.rev.transcript.v1.0+json
+            current_value: '*/*'
+            type: https://www.rev.ai/api/v1/errors/unsupported-output-format
+            title: Output format is not supported
+            detail: Unsupported value */*
+            status: 406
+    InvalidJobPropertyCaptions:
+      description: Invalid Job Property
+      content:
+        application/problem+json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/BaseProblemDetails'
+              - type: object
+                properties:
+                  detail:
+                    type: string
+                    description: Human-readable explanation specific to this occurrence of the problem
+          example:
+            type: https://rev.ai/api/v1/errors/invalid-job-properties
+            title: Job contains unsupported properties
+            detail: Job with speaker channels provided are not supported for retrieving captions
+            status: 405
+    InvalidCaptionFormat:
+      description: Invalid Caption Format
+      content:
+        application/problem+json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/BaseProblemDetails'
+              - type: object
+                properties:
+                  current_value:
+                    type: string
+                    description: Value passed in given request
+                  allowed_values:
+                    type: array
+                    description: Allowed values for this request
+                    items:
+                      type: string
+                  detail:
+                    type: string
+                    description: Human-readable explanation specific to this occurrence of the problem
+          example:
+            allowed_values:
+              - application/x-subrip
+              - text/vtt
+            current_value: '*/*'
+            type: https://www.rev.ai/api/v1/errors/unsupported-output-format
+            title: Output format is not supported
+            detail: Unsupported value */*
+            status: 406
