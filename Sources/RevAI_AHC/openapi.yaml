@@ -1172,7 +1172,7 @@ components:
       enum:
         - machine
         - human
-        - machine_v2
+        - low_cost
     AsyncTranscriptionJob:
       type: object
       description: |
@@ -1209,10 +1209,14 @@ components:
           description: Type of speech recognition performed.
           enum:
             - async
+            - low_cost_async
           nullable: false
           example: async
         callback_url:
           $ref: '#/components/schemas/CallbackUrlField'
+          deprecated: true
+        notification_config:
+          $ref: '#/components/schemas/NotificationConfig'
         media_url:
           $ref: '#/components/schemas/MediaUrlField'
         delete_after_seconds:
@@ -1613,6 +1617,22 @@ components:
           type: integer
           description: Amount of Rev AI API credits remaining in seconds
           example: 150
+    NotificationConfig:
+      type: object
+      description: Optional configuration for a callback url to invoke when processing is complete, in addition to auth headers if they are needed to invoke the callback url. Cannot be set if callback_url is set. This option will not be visible in the submission response.
+      properties:
+        url:
+          type: string
+          description: Optional callback url to invoke when processing is complete
+        auth_headers:
+          type: object
+          description: |
+            Optional authorization headers, if they are needed to invoke the callback. There are a few constraints:
+            1) the “Authorization” header is the only header that can be passed in, and
+            2) the header value must be of the form <scheme> <token>. For example: {"Authorization": "Bearer $BEARER_TOKEN"}
+          Authorization:
+            type: string
+  
   examples:
     NewJob:
       value:

@@ -323,7 +323,7 @@ public enum Components {
         @frozen public enum TranscriberField: String, Codable, Hashable, Sendable, CaseIterable {
             case machine = "machine"
             case human = "human"
-            case machine_v2 = "machine_v2"
+            case low_cost = "low_cost"
         }
         /// Rev AI Transcription Job
         /// ***
@@ -397,6 +397,7 @@ public enum Components {
             /// - Remark: Generated from `#/components/schemas/AsyncTranscriptionJob/type`.
             @frozen public enum _typePayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case async = "async"
+                case low_cost_async = "low_cost_async"
             }
             /// Type of speech recognition performed.
             ///
@@ -404,6 +405,8 @@ public enum Components {
             public var _type: Components.Schemas.AsyncTranscriptionJob._typePayload?
             /// - Remark: Generated from `#/components/schemas/AsyncTranscriptionJob/callback_url`.
             public var callback_url: Components.Schemas.CallbackUrlField?
+            /// - Remark: Generated from `#/components/schemas/AsyncTranscriptionJob/notification_config`.
+            public var notification_config: Components.Schemas.NotificationConfig?
             /// - Remark: Generated from `#/components/schemas/AsyncTranscriptionJob/media_url`.
             public var media_url: Components.Schemas.MediaUrlField?
             /// - Remark: Generated from `#/components/schemas/AsyncTranscriptionJob/delete_after_seconds`.
@@ -526,6 +529,7 @@ public enum Components {
             ///   - failure_detail:
             ///   - _type: Type of speech recognition performed.
             ///   - callback_url:
+            ///   - notification_config:
             ///   - media_url:
             ///   - delete_after_seconds:
             ///   - skip_diarization: User-supplied preference on whether to skip diarization.
@@ -548,6 +552,7 @@ public enum Components {
                 failure_detail: Components.Schemas.AsyncTranscriptionJob.failure_detailPayload? = nil,
                 _type: Components.Schemas.AsyncTranscriptionJob._typePayload? = nil,
                 callback_url: Components.Schemas.CallbackUrlField? = nil,
+                notification_config: Components.Schemas.NotificationConfig? = nil,
                 media_url: Components.Schemas.MediaUrlField? = nil,
                 delete_after_seconds: Components.Schemas.DeleteAfterSecondsField? = nil,
                 skip_diarization: Components.Schemas.AsyncTranscriptionJob.skip_diarizationPayload? = nil,
@@ -570,6 +575,7 @@ public enum Components {
                 self.failure_detail = failure_detail
                 self._type = _type
                 self.callback_url = callback_url
+                self.notification_config = notification_config
                 self.media_url = media_url
                 self.delete_after_seconds = delete_after_seconds
                 self.skip_diarization = skip_diarization
@@ -593,6 +599,7 @@ public enum Components {
                 case failure_detail
                 case _type = "type"
                 case callback_url
+                case notification_config
                 case media_url
                 case delete_after_seconds
                 case skip_diarization
@@ -1731,6 +1738,38 @@ public enum Components {
             public enum CodingKeys: String, CodingKey {
                 case email
                 case balance_seconds
+            }
+        }
+        /// Optional configuration for a callback url to invoke when processing is complete, in addition to auth headers if they are needed to invoke the callback url. Cannot be set if callback_url is set. This option will not be visible in the submission response.
+        ///
+        /// - Remark: Generated from `#/components/schemas/NotificationConfig`.
+        public struct NotificationConfig: Codable, Hashable, Sendable {
+            /// Optional callback url to invoke when processing is complete
+            ///
+            /// - Remark: Generated from `#/components/schemas/NotificationConfig/url`.
+            public var url: Swift.String?
+            /// Optional authorization headers, if they are needed to invoke the callback. There are a few constraints:
+            /// 1) the “Authorization” header is the only header that can be passed in, and
+            /// 2) the header value must be of the form <scheme> <token>. For example: {"Authorization": "Bearer $BEARER_TOKEN"}
+            ///
+            ///
+            /// - Remark: Generated from `#/components/schemas/NotificationConfig/auth_headers`.
+            public var auth_headers: OpenAPIRuntime.OpenAPIObjectContainer?
+            /// Creates a new `NotificationConfig`.
+            ///
+            /// - Parameters:
+            ///   - url: Optional callback url to invoke when processing is complete
+            ///   - auth_headers: Optional authorization headers, if they are needed to invoke the callback. There are a few constraints:
+            public init(
+                url: Swift.String? = nil,
+                auth_headers: OpenAPIRuntime.OpenAPIObjectContainer? = nil
+            ) {
+                self.url = url
+                self.auth_headers = auth_headers
+            }
+            public enum CodingKeys: String, CodingKey {
+                case url
+                case auth_headers
             }
         }
     }
